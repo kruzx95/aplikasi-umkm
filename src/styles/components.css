@@ -112,9 +112,12 @@
     font-size: 1rem;
   }
 
+  .badge-pwa {
+    display: none !important;
+  }
+
   .brand-subtitle {
-    max-width: 105px;
-    font-size: 0.68rem;
+    display: none;
   }
 
   .navbar-actions {
@@ -134,10 +137,10 @@
     height: 32px;
   }
 
-  .role-selector-wrap select {
-    max-width: 90px;
-    padding: 0.3rem 0.35rem;
-    font-size: 0.72rem;
+  .role-badge-btn {
+    padding: 0.32rem 0.5rem;
+    font-size: 0.75rem;
+    gap: 0.25rem;
   }
 }
 
@@ -170,7 +173,7 @@
   color: var(--text-secondary);
   width: 38px;
   height: 38px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,51 +187,201 @@
   border-color: var(--border-strong);
 }
 
-.role-selector-wrap select {
+/* Role Badge Trigger Button */
+.role-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.75rem;
+  border-radius: var(--radius-full);
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 700;
-  padding: 0.45rem 0.75rem;
-  border-radius: var(--radius-sm);
   cursor: pointer;
-  outline: none;
   transition: var(--transition-smooth);
+  white-space: nowrap;
+  flex-shrink: 0;
+  outline: none;
+  border: 1.5px solid transparent;
+}
+
+.role-badge-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.role-badge-btn:active {
+  transform: scale(0.97);
+}
+
+.role-badge-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.role-badge-chevron {
+  opacity: 0.65;
+  transition: transform 0.2s ease;
+}
+
+.role-badge-btn:hover .role-badge-chevron {
+  transform: translateY(1px);
+  opacity: 1;
 }
 
 .role-superadmin {
   background: #f5f3ff;
-  border: 1.5px solid #ddd6fe;
-  color: #5b21b6;
+  border-color: #ddd6fe;
+  color: #6d28d9;
 }
 
 .role-owner {
   background: #ecfdf5;
-  border: 1.5px solid #a7f3d0;
+  border-color: #a7f3d0;
   color: #047857;
 }
 
 .role-cashier {
   background: #fffbeb;
-  border: 1.5px solid #fde68a;
-  color: #92400e;
+  border-color: #fde68a;
+  color: #b45309;
 }
 
 [data-theme='dark'] .role-superadmin {
-  background: rgba(139, 92, 246, 0.12);
-  border: 1.5px solid rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
   color: #c4b5fd;
 }
 
 [data-theme='dark'] .role-owner {
-  background: rgba(16, 185, 129, 0.12);
-  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
   color: #6ee7b7;
 }
 
 [data-theme='dark'] .role-cashier {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
   color: #fcd34d;
+}
+
+/* Role Select Modal & Bottom Sheet */
+.role-modal-content {
+  max-width: 480px;
+}
+
+.role-option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.95rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-subtle);
+  background-color: var(--bg-surface-elevated);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  position: relative;
+}
+
+.role-option-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.role-option-card.active-role {
+  border-color: var(--primary-500);
+  background-color: var(--primary-50);
+}
+
+[data-theme='dark'] .role-option-card.active-role {
+  border-color: var(--primary-500);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.role-option-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-owner {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.icon-cashier {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.icon-superadmin {
+  background-color: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+[data-theme='dark'] .icon-owner {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme='dark'] .icon-cashier {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+[data-theme='dark'] .icon-superadmin {
+  background-color: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.role-option-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.role-option-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-option-title-row strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--primary-500);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.role-option-desc {
+  font-size: 0.775rem;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 /* Tenant & Branch Bar */
@@ -273,44 +426,87 @@
 
 .bar-select {
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  border: 1.5px solid var(--border-subtle);
   color: var(--text-primary);
-  padding: 0.25rem 0.45rem;
-  border-radius: var(--radius-xs);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-full);
   font-family: inherit;
-  font-size: 0.75rem;
+  font-size: 0.785rem;
   font-weight: 600;
   outline: none;
-  max-width: 110px;
+  max-width: 120px;
   text-overflow: ellipsis;
   transition: var(--transition-smooth);
+  cursor: pointer;
 }
 
 @media (min-width: 480px) {
   .bar-select {
-    max-width: 150px;
-    font-size: 0.775rem;
-    padding: 0.25rem 0.55rem;
+    max-width: 160px;
+    font-size: 0.8rem;
+    padding: 0.35rem 0.85rem;
   }
 }
 
 @media (min-width: 640px) {
   .bar-select {
-    max-width: 220px;
+    max-width: 240px;
     font-size: 0.825rem;
-    padding: 0.3rem 0.65rem;
+    padding: 0.38rem 0.95rem;
   }
+}
+
+.bar-select:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-surface-elevated);
 }
 
 .bar-select:focus {
   border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 
 .outlet-btn {
   margin-left: auto;
-  padding: 0.3rem 0.6rem;
-  font-size: 0.75rem;
+  padding: 0.38rem 0.85rem;
+  font-size: 0.775rem;
   white-space: nowrap;
+  border-radius: var(--radius-full) !important;
+}
+
+@media (max-width: 640px) {
+  .tenant-branch-bar {
+    padding: 0.35rem 0.65rem;
+    gap: 0.35rem;
+    overflow-x: hidden;
+  }
+
+  .tenant-select-group, .branch-select-group {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .bar-label {
+    font-size: 0.65rem;
+  }
+
+  .bar-select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0.25rem 0.35rem;
+    font-size: 0.72rem;
+  }
+
+  .outlet-btn {
+    padding: 0.3rem 0.45rem;
+    flex-shrink: 0;
+    margin-left: 0.2rem;
+  }
+
+  .outlet-btn-text {
+    display: none;
+  }
 }
 
 /* Bottom Nav Styles */
@@ -542,23 +738,25 @@
 @media (min-width: 768px) {
   .desktop-nav-tabs {
     display: flex;
-    gap: 0.25rem;
-    padding: 0.75rem 2rem;
+    gap: 0.35rem;
+    padding: 0.65rem 2rem;
     background-color: var(--bg-surface);
     border-bottom: 1px solid var(--border-subtle);
+    align-items: center;
+    overflow-x: auto;
   }
 
   .tab-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.55rem 1rem;
-    border-radius: var(--radius-sm);
+    padding: 0.45rem 1.1rem;
+    border-radius: var(--radius-full);
     background-color: transparent;
-    border: 1px solid transparent;
+    border: 1.5px solid transparent;
     color: var(--text-secondary);
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.825rem;
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition-smooth);
@@ -567,14 +765,22 @@
 
   .tab-btn:hover {
     background-color: var(--bg-surface-elevated);
+    border-color: var(--border-subtle);
     color: var(--text-primary);
   }
 
   .tab-btn.active {
     background-color: var(--primary-50);
-    border-color: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.35);
     color: var(--primary-700);
     font-weight: 700;
+    box-shadow: 0 2px 6px -1px rgba(16, 185, 129, 0.15);
+  }
+
+  [data-theme='dark'] .tab-btn.active {
+    background-color: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #6ee7b7;
   }
 }
 

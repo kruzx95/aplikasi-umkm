@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
   Store as StoreIcon, 
@@ -13,6 +13,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { UserRole } from '../../types';
+import { RoleSelectModal } from './RoleSelectModal';
 
 export const Navbar: React.FC = () => {
   const { 
@@ -30,6 +31,8 @@ export const Navbar: React.FC = () => {
     setIsStoreModalOpen
   } = useApp();
 
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+
   return (
     <header className="navbar-container">
       <div className="navbar-top">
@@ -41,7 +44,7 @@ export const Navbar: React.FC = () => {
           <div className="brand-info">
             <div className="brand-title-wrap">
               <h1 className="brand-title">KasKedai</h1>
-              <span className="badge badge-emerald">F&B PWA</span>
+              <span className="badge badge-emerald badge-pwa">F&B PWA</span>
             </div>
             <p className="brand-subtitle">
               {role === 'superadmin' ? 'Master Platform Console' : (activeTenant?.businessName || 'Buku Kas Kedai')}
@@ -67,19 +70,22 @@ export const Navbar: React.FC = () => {
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          {/* Role Switcher Pill (Untuk demo & kemudahan tes) */}
-          <div className="role-selector-wrap">
-            <select
-              className={`role-select role-${role}`}
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-              aria-label="Pilih Peran Pengguna"
-            >
-              <option value="superadmin">👑 Admin</option>
-              <option value="owner">🏪 Owner</option>
-              <option value="cashier">💼 Kasir</option>
-            </select>
-          </div>
+          {/* Role Switcher Pill Trigger Modal */}
+          <button
+            type="button"
+            className={`role-badge-btn role-${role}`}
+            onClick={() => setIsRoleModalOpen(true)}
+            title="Ganti Peran / Hak Akses (Superadmin, Owner, Kasir)"
+            aria-label="Pilih Peran Pengguna"
+          >
+            <span className="role-badge-icon">
+              {role === 'superadmin' ? '👑' : role === 'owner' ? '🏪' : '💼'}
+            </span>
+            <span className="role-badge-label">
+              {role === 'superadmin' ? 'Superadmin' : role === 'owner' ? 'Owner' : 'Kasir'}
+            </span>
+            <ChevronDown size={13} className="role-badge-chevron" />
+          </button>
         </div>
       </div>
 
@@ -128,13 +134,20 @@ export const Navbar: React.FC = () => {
               className="btn btn-outline btn-sm outlet-btn" 
               onClick={() => setIsStoreModalOpen(true)}
               title="Kelola Outlet & Cabang"
+              aria-label="Kelola Outlet & Cabang"
             >
               <Settings size={14} />
-              <span>Kelola Toko</span>
+              <span className="outlet-btn-text">Kelola Toko</span>
             </button>
           )}
         </div>
       )}
+
+      {/* Role Selection Modal */}
+      <RoleSelectModal 
+        isOpen={isRoleModalOpen} 
+        onClose={() => setIsRoleModalOpen(false)} 
+      />
     </header>
   );
 };

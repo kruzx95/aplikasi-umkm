@@ -207,16 +207,16 @@ export const DashboardView: React.FC = () => {
 
       {/* Action Bar */}
       <div className="quick-actions-bar">
-        <button className="btn btn-primary btn-lg flex-1" onClick={() => setIsAddTxOpen(true)}>
-          <Plus size={20} />
+        <button className="btn btn-primary btn-lg action-btn-main" onClick={() => setIsAddTxOpen(true)}>
+          <Plus size={19} />
           <span>Catat Transaksi Cepat</span>
         </button>
-        <button className="btn btn-secondary btn-lg" onClick={() => setIsShiftModalOpen(true)}>
-          <CircleDollarSign size={20} />
+        <button className="btn btn-secondary btn-lg action-btn-shift" onClick={() => setIsShiftModalOpen(true)}>
+          <CircleDollarSign size={18} />
           <span>Tutup / Buka Shift</span>
         </button>
         {role !== 'cashier' && (
-          <button className="btn btn-outline btn-lg" onClick={() => setActiveTab('reports')}>
+          <button className="btn btn-outline btn-lg action-btn-wa" onClick={() => setActiveTab('reports')}>
             <Share2 size={18} />
             <span>Kirim Rekap WA</span>
           </button>
