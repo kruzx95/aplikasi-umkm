@@ -1,0 +1,158 @@
+/* Shifts Specific Styles */
+.shift-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 1.1rem;
+  background-color: var(--primary-50);
+  border: 1.5px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.shift-summary-box {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shift-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.shift-divider {
+  border: none;
+  border-top: 1px dashed var(--border-strong);
+  margin: 0.25rem 0;
+}
+
+.shift-calc-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.calc-row {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 500;
+}
+
+.calc-row.total-expected {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border-strong);
+  font-size: 0.95rem;
+  color: var(--accent-amber);
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary-500);
+  font-family: inherit;
+  font-size: 0.775rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Denom Calculator */
+.denom-calc-card {
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.denom-title {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.denom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
+}
+
+.denom-input-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.775rem;
+}
+
+.denom-lbl {
+  width: 65px;
+  color: var(--text-secondary);
+}
+
+.denom-field {
+  width: 50px;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 0.2rem 0.35rem;
+  text-align: center;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+.text-xs {
+  font-size: 0.7rem;
+}
+
+/* Discrepancy Alert */
+.discrepancy-card {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.disc-match {
+  background-color: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.disc-over {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.disc-under {
+  background-color: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.disc-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}

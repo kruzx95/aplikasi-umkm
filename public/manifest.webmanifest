@@ -1,0 +1,17 @@
+{
+  "name": "KasKedai - Buku Kas Keuangan Kedai UMKM",
+  "short_name": "KasKedai",
+  "description": "Aplikasi Buku Kas & Keuangan Modern untuk Kedai Makanan & Jajanan UMKM",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#059669",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
