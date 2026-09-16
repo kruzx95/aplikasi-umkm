@@ -20,8 +20,19 @@ export const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 export async function seedInitialDataIfNeeded() {
+  const isFreshMode = localStorage.getItem('kaskedai_fresh_mode');
+  if (isFreshMode === 'true') {
+    // Pastikan kategori bawaan F&B tetap terpasang jika kosong
+    const catCount = await db.categories.count();
+    if (catCount === 0) {
+      await db.categories.bulkPut(DEFAULT_CATEGORIES);
+    }
+    return;
+  }
+
   const tenantCount = await db.tenants.count();
   if (tenantCount > 0) {
+    await seedHistoricalTransactionsIfNeeded();
     return; // Data sudah ada
   }
 
@@ -236,6 +247,14 @@ export async function seedInitialDataIfNeeded() {
   await db.transactions.bulkPut(sampleTransactions);
 
   // 6. Seed Debts (Kasbon / Bon Supplier)
+  const dOverdue = new Date();
+  dOverdue.setDate(dOverdue.getDate() - 3);
+  const overdueStr = dOverdue.toISOString().split('T')[0];
+
+  const dUpcoming = new Date();
+  dUpcoming.setDate(dUpcoming.getDate() + 4);
+  const upcomingStr = dUpcoming.toISOString().split('T')[0];
+
   const sampleDebts: Debt[] = [
     {
       id: 'debt-1',
@@ -251,6 +270,29 @@ export async function seedInitialDataIfNeeded() {
       createdAt: new Date().toISOString(),
     },
     {
+      id: 'debt-overdue-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      personName: 'Bu Ratna (Catering Arisan Dharma Wanita)',
+      phone: '081388776655',
+      type: 'piutang',
+      amount: 175000,
+      originalAmount: 225000,
+      dueDate: overdueStr,
+      status: 'unpaid',
+      description: 'Pesanan snack box roti bakar 15 porsi, sisa tagihan belum lunas',
+      createdAt: dOverdue.toISOString(),
+      paymentHistory: [
+        {
+          amount: 50000,
+          date: overdueStr,
+          paymentMethod: 'cash',
+          note: 'DP awal 50rb',
+          actorName: 'Bima (Kasir Pagi)'
+        }
+      ]
+    },
+    {
       id: 'debt-2',
       tenantId: 'tenant-mas-roy',
       storeId: 'store-roy-ruko',
@@ -260,7 +302,20 @@ export async function seedInitialDataIfNeeded() {
       amount: 250000,
       dueDate: todayStr,
       status: 'unpaid',
-      description: 'Karton cup takeaway 16oz (2 dus), tempo bayar Sabtu',
+      description: 'Karton cup takeaway 16oz (2 dus), tempo bayar hari ini',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'debt-upcoming-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      personName: 'Supplier Susu Segar Segoro',
+      phone: '081555667788',
+      type: 'utang',
+      amount: 320000,
+      dueDate: upcomingStr,
+      status: 'unpaid',
+      description: 'Pengiriman 2 jerigen susu UHT & fresh milk mingguan',
       createdAt: new Date().toISOString(),
     }
   ];
@@ -312,4 +367,370 @@ export async function seedInitialDataIfNeeded() {
     }
   ];
   await db.audit_logs.bulkPut(sampleAuditLogs);
+
+  // 8. Ensure 7 days of realistic history
+  await seedHistoricalTransactionsIfNeeded();
 }
+
+export async function seedHistoricalTransactionsIfNeeded() {
+  const existing = await db.transactions.where('id').equals('tx-hist-d1-1').first();
+  if (existing) return;
+
+  const getRelativeDateStr = (daysAgo: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return d.toISOString().split('T')[0];
+  };
+
+  const histTxs: Transaction[] = [
+    // 1 Day Ago (Yesterday)
+    {
+      id: 'tx-hist-d1-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 480000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Kopi Susu & Roti Bakar Sore',
+      date: getRelativeDateStr(1),
+      time: '16:30',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 1 + 3600000 * 16).toISOString(),
+    },
+    {
+      id: 'tx-hist-d1-2',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 720000,
+      paymentMethod: 'qris',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Meja 1 s/d 5 Rombongan Siang',
+      date: getRelativeDateStr(1),
+      time: '13:15',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 1 + 3600000 * 13).toISOString(),
+    },
+    {
+      id: 'tx-hist-d1-3',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'out',
+      amount: 165000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_out_bahan',
+      categoryName: 'Bahan Baku (Pasar/Daging/Sayur/Bumbu)',
+      description: 'Belanja Daging Ayam & Bumbu Pasar Pagi',
+      date: getRelativeDateStr(1),
+      time: '07:30',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 1 + 3600000 * 7).toISOString(),
+    },
+
+    // 2 Days Ago
+    {
+      id: 'tx-hist-d2-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 850000,
+      paymentMethod: 'qris',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Paket Katering Snack Box Kantor BPN',
+      date: getRelativeDateStr(2),
+      time: '10:00',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 2 + 3600000 * 10).toISOString(),
+    },
+    {
+      id: 'tx-hist-d2-2',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 540000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Minuman Dingin & Snack Sore',
+      date: getRelativeDateStr(2),
+      time: '15:20',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 2 + 3600000 * 15).toISOString(),
+    },
+    {
+      id: 'tx-hist-d2-3',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 250000,
+      paymentMethod: 'transfer',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Transfer DP Pesanan Rapat Komunitas',
+      date: getRelativeDateStr(2),
+      time: '17:00',
+      createdByRole: 'owner',
+      createdByName: 'Mas Roy (Owner)',
+      createdAt: new Date(Date.now() - 86400000 * 2 + 3600000 * 17).toISOString(),
+    },
+    {
+      id: 'tx-hist-d2-4',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'out',
+      amount: 220000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_out_bahan',
+      categoryName: 'Bahan Baku (Pasar/Daging/Sayur/Bumbu)',
+      description: 'Belanja Telur 2 Krat & Roti Bandung',
+      date: getRelativeDateStr(2),
+      time: '07:15',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 2 + 3600000 * 7).toISOString(),
+    },
+
+    // 3 Days Ago (Weekend)
+    {
+      id: 'tx-hist-d3-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 1150000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Rame Weekend Meja Luar & Dalam',
+      date: getRelativeDateStr(3),
+      time: '19:30',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 3 + 3600000 * 19).toISOString(),
+    },
+    {
+      id: 'tx-hist-d3-2',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 880000,
+      paymentMethod: 'qris',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Pembayaran QRIS Pengunjung Malam Minggu',
+      date: getRelativeDateStr(3),
+      time: '20:45',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 3 + 3600000 * 20).toISOString(),
+    },
+    {
+      id: 'tx-hist-d3-3',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'out',
+      amount: 280000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_out_bahan',
+      categoryName: 'Bahan Baku (Pasar/Daging/Sayur/Bumbu)',
+      description: 'Restock Daging Sapi & Sayuran Segar',
+      date: getRelativeDateStr(3),
+      time: '07:00',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 3 + 3600000 * 7).toISOString(),
+    },
+
+    // 4 Days Ago
+    {
+      id: 'tx-hist-d4-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 620000,
+      paymentMethod: 'qris',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Meja 2 & 4 Komunitas Sepeda',
+      date: getRelativeDateStr(4),
+      time: '14:20',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 4 + 3600000 * 14).toISOString(),
+    },
+    {
+      id: 'tx-hist-d4-2',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 430000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Kopi Aren & Camilan',
+      date: getRelativeDateStr(4),
+      time: '16:00',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 4 + 3600000 * 16).toISOString(),
+    },
+    {
+      id: 'tx-hist-d4-3',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'out',
+      amount: 190000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_out_minyak',
+      categoryName: 'Minyak Goreng & Saus/Kecap',
+      description: 'Belanja Minyak Goreng 2 Jerigen & Keju Cheddar',
+      date: getRelativeDateStr(4),
+      time: '07:45',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 4 + 3600000 * 7).toISOString(),
+    },
+
+    // 5 Days Ago
+    {
+      id: 'tx-hist-d5-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 510000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Sarapan Pagi & Es Kopi',
+      date: getRelativeDateStr(5),
+      time: '09:15',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 5 + 3600000 * 9).toISOString(),
+    },
+    {
+      id: 'tx-hist-d5-2',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 490000,
+      paymentMethod: 'qris',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Makan Siang Pegawai',
+      date: getRelativeDateStr(5),
+      time: '12:30',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 5 + 3600000 * 12).toISOString(),
+    },
+    {
+      id: 'tx-hist-d5-3',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'out',
+      amount: 135000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_out_bahan',
+      categoryName: 'Bahan Baku (Pasar/Daging/Sayur/Bumbu)',
+      description: 'Belanja Buah Segar & Sirup Kental Manis',
+      date: getRelativeDateStr(5),
+      time: '08:00',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 5 + 3600000 * 8).toISOString(),
+    },
+
+    // 6 Days Ago
+    {
+      id: 'tx-hist-d6-1',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 420000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Penjualan Kopi Pagi & Roti Bakar Bandung',
+      date: getRelativeDateStr(6),
+      time: '08:30',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 6 + 3600000 * 8).toISOString(),
+    },
+    {
+      id: 'tx-hist-d6-2',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'in',
+      amount: 580000,
+      paymentMethod: 'qris',
+      categoryId: 'cat_in_sales',
+      categoryName: 'Penjualan Menu Makanan & Minuman',
+      description: 'Pesanan QRIS Makan Siang Meja 3 & 5',
+      date: getRelativeDateStr(6),
+      time: '13:00',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 6 + 3600000 * 13).toISOString(),
+    },
+    {
+      id: 'tx-hist-d6-3',
+      tenantId: 'tenant-mas-roy',
+      storeId: 'store-roy-ruko',
+      type: 'out',
+      amount: 150000,
+      paymentMethod: 'cash',
+      categoryId: 'cat_out_bahan',
+      categoryName: 'Bahan Baku (Pasar/Daging/Sayur/Bumbu)',
+      description: 'Bahan Baku Dasar & Es Kristal 3 Sak',
+      date: getRelativeDateStr(6),
+      time: '07:15',
+      createdByRole: 'cashier',
+      createdByName: 'Bima (Kasir Pagi)',
+      createdAt: new Date(Date.now() - 86400000 * 6 + 3600000 * 7).toISOString(),
+    }
+  ];
+
+  await db.transactions.bulkPut(histTxs);
+}
+
+/**
+ * Mengosongkan seluruh database agar aplikasi kembali bersih (Fresh State)
+ * Kategori standar F&B tetap dipertahankan agar pencatatan transaksi langsung siap pakai.
+ */
+export async function resetDatabaseToFresh() {
+  localStorage.setItem('kaskedai_fresh_mode', 'true');
+  await db.transactions.clear();
+  await db.debts.clear();
+  await db.shifts.clear();
+  await db.stores.clear();
+  await db.tenants.clear();
+  await db.audit_logs.clear();
+  await db.categories.clear();
+  await db.categories.bulkPut(DEFAULT_CATEGORIES);
+}
+
+/**
+ * Mengembalikan data demo (Kedai Mas Roy & Bu Tari) beserta transaksi contoh
+ */
+export async function restoreDemoSeedData() {
+  localStorage.removeItem('kaskedai_fresh_mode');
+  await db.transactions.clear();
+  await db.debts.clear();
+  await db.shifts.clear();
+  await db.stores.clear();
+  await db.tenants.clear();
+  await db.audit_logs.clear();
+  await db.categories.clear();
+  await seedInitialDataIfNeeded();
+}
+

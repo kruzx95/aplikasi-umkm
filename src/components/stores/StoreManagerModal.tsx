@@ -31,7 +31,11 @@ export const StoreManagerModal: React.FC = () => {
 
     // Check plan limits
     if (activeTenant.subscriptionPlan === 'starter' && stores.length >= 1) {
-      alert('Paket Starter dibatasi hanya 1 outlet/cabang. Silakan upgrade ke Paket Pro untuk mengelola banyak cabang kedai!');
+      alert('Paket Starter dibatasi hanya 1 outlet/cabang. Silakan upgrade ke Paket Pro untuk mengelola hingga 3 cabang kedai!');
+      return;
+    }
+    if (activeTenant.subscriptionPlan === 'pro' && stores.length >= 3) {
+      alert('Paket Pro dibatasi maksimal 3 outlet/cabang. Silakan upgrade ke Paket Enterprise untuk mengelola cabang tanpa batas!');
       return;
     }
 
@@ -86,7 +90,13 @@ export const StoreManagerModal: React.FC = () => {
           {/* Subscription info */}
           <div className="tenant-plan-notice">
             <span>Paket: <strong>{activeTenant.subscriptionPlan.toUpperCase()}</strong></span>
-            <span>Jumlah Cabang: <strong>{stores.length} Outlet</strong></span>
+            <span>
+              Kapasitas Cabang: <strong>
+                {activeTenant.subscriptionPlan === 'starter' ? `${stores.length} / 1 Outlet (Maks. 1)` :
+                 activeTenant.subscriptionPlan === 'pro' ? `${stores.length} / 3 Outlet (Maks. 3)` :
+                 `${stores.length} Outlet (Unlimited)`}
+              </strong>
+            </span>
           </div>
 
           {/* List of Outlets */}

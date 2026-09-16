@@ -147,3 +147,60 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* Filter Controls for Logs */
+.filter-buttons-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .filter-buttons-group {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+}
+
+.filter-buttons-group .btn-group {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+}
+
+.filter-tenant-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .filter-tenant-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+  }
+}
+
+.filter-tenant-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.filter-tenant-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}

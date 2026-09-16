@@ -19,7 +19,8 @@ import {
   Store,
   Zap,
   ShoppingBag,
-  Wallet
+  Wallet,
+  Tag
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -32,7 +33,8 @@ export const AddTransactionModal: React.FC = () => {
     role, 
     currentActorName,
     activeShift,
-    refreshAllData 
+    refreshAllData,
+    setIsCategoryModalOpen
   } = useApp();
 
   const [type, setType] = useState<TransactionType>('in');
@@ -258,7 +260,21 @@ export const AddTransactionModal: React.FC = () => {
 
             {/* 4. Category Selection */}
             <div className="form-group">
-              <label className="form-label">Kategori {type === 'in' ? 'Pemasukan' : 'Pengeluaran'}</label>
+              <div className="cat-section-header-flex">
+                <label className="form-label" style={{ marginBottom: 0 }}>
+                  Kategori {type === 'in' ? 'Pemasukan' : 'Pengeluaran'}
+                </label>
+                {role === 'owner' && (
+                  <button
+                    type="button"
+                    className="btn-manage-cat-link text-xs"
+                    onClick={() => setIsCategoryModalOpen(true)}
+                  >
+                    <Tag size={12} />
+                    <span>+ Kelola Kategori</span>
+                  </button>
+                )}
+              </div>
               <div className="categories-chips-grid">
                 {categories.map((cat) => (
                   <button

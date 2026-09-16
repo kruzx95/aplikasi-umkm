@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { db } from '../../db/database';
 import { logActivity } from '../../db/logger';
-import { Transaction, TransactionType, PaymentMethod } from '../../types';
+import { Transaction, TransactionType, PaymentMethod, Category } from '../../types';
 import { 
   Search, 
   Filter, 
@@ -12,8 +12,14 @@ import {
   Trash2, 
   Coins, 
   CreditCard,
-  Calendar,
-  AlertTriangle
+  Building2,
+  Calendar, 
+  AlertTriangle,
+  X,
+  RotateCcw,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Tag
 } from 'lucide-react';
 
 export const TransactionListView: React.FC = () => {
@@ -27,24 +33,38 @@ export const TransactionListView: React.FC = () => {
   } = useApp();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
-  const [filterMethod, setFilterMethod] = useState<'all' | PaymentMethod>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Search and Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
+  const [filterMethod, setFilterMethod] = useState<'all' | PaymentMethod>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7days' | 'month' | 'custom'>('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
   useEffect(() => {
-    loadTransactions();
+    loadTransactionsAndCategories();
   }, [activeStore]);
 
-  const loadTransactions = async () => {
+  const loadTransactionsAndCategories = async () => {
     if (!activeStore) return;
     setLoading(true);
-    const txs = await db.transactions
-      .where('storeId')
-      .equals(activeStore.id)
-      .reverse()
-      .sortBy('createdAt');
+    const [txs, cats] = await Promise.all([
+      db.transactions
+        .where('storeId')
+        .equals(activeStore.id)
+        .reverse()
+        .sortBy('createdAt'),
+      db.categories.toArray()
+    ]);
     setTransactions(txs);
+    setCategories(cats);
     setLoading(false);
   };
 
@@ -76,24 +96,102 @@ export const TransactionListView: React.FC = () => {
       });
 
       await refreshAllData();
-      await loadTransactions();
+      await loadTransactionsAndCategories();
     } catch (err) {
       console.error(err);
       alert('Gagal menghapus transaksi.');
     }
   };
 
-  // Filtered List
-  const filteredList = transactions.filter((tx) => {
-    const matchesType = filterType === 'all' || tx.type === filterType;
-    const matchesMethod = filterMethod === 'all' || tx.paymentMethod === filterMethod;
-    const matchesSearch = 
-      (tx.description && tx.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (tx.categoryName && tx.categoryName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (tx.createdByName && tx.createdByName.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Reset all filters
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterType('all');
+    setFilterMethod('all');
+    setFilterCategory('all');
+    setDateFilter('all');
+    setCustomStartDate('');
+    setCustomEndDate('');
+    setSortBy('date-desc');
+  };
 
-    return matchesType && matchesMethod && matchesSearch;
-  });
+  // Check if any filter is active
+  const hasActiveFilters = 
+    searchQuery.trim() !== '' || 
+    filterType !== 'all' || 
+    filterMethod !== 'all' || 
+    filterCategory !== 'all' || 
+    dateFilter !== 'all' || 
+    sortBy !== 'date-desc';
+
+  // Filtered & Sorted List
+  const filteredList = useMemo(() => {
+    let list = transactions.filter((tx) => {
+      // 1. Type filter
+      if (filterType !== 'all' && tx.type !== filterType) return false;
+
+      // 2. Method filter
+      if (filterMethod !== 'all' && tx.paymentMethod !== filterMethod) return false;
+
+      // 3. Category filter
+      if (filterCategory !== 'all' && tx.categoryId !== filterCategory && tx.categoryName !== filterCategory) return false;
+
+      // 4. Date filter
+      if (dateFilter === 'today') {
+        if (tx.date !== todayStr) return false;
+      } else if (dateFilter === '7days') {
+        const d = new Date();
+        d.setDate(d.getDate() - 6);
+        const cutoff = d.toISOString().split('T')[0];
+        if (tx.date < cutoff) return false;
+      } else if (dateFilter === 'month') {
+        const currentMonth = todayStr.substring(0, 7);
+        if (!tx.date.startsWith(currentMonth)) return false;
+      } else if (dateFilter === 'custom') {
+        if (customStartDate && tx.date < customStartDate) return false;
+        if (customEndDate && tx.date > customEndDate) return false;
+      }
+
+      // 5. Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const descMatch = tx.description ? tx.description.toLowerCase().includes(q) : false;
+        const catMatch = tx.categoryName ? tx.categoryName.toLowerCase().includes(q) : false;
+        const actorMatch = tx.createdByName ? tx.createdByName.toLowerCase().includes(q) : false;
+        const amountMatch = tx.amount.toString().includes(q);
+        if (!descMatch && !catMatch && !actorMatch && !amountMatch) return false;
+      }
+
+      return true;
+    });
+
+    // Sorting
+    list.sort((a, b) => {
+      if (sortBy === 'date-desc') {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      } else if (sortBy === 'date-asc') {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else if (sortBy === 'amount-desc') {
+        return b.amount - a.amount;
+      } else if (sortBy === 'amount-asc') {
+        return a.amount - b.amount;
+      }
+      return 0;
+    });
+
+    return list;
+  }, [
+    transactions, 
+    filterType, 
+    filterMethod, 
+    filterCategory, 
+    dateFilter, 
+    customStartDate, 
+    customEndDate, 
+    searchQuery, 
+    sortBy, 
+    todayStr
+  ]);
 
   const totalFilteredIncome = filteredList
     .filter(t => t.type === 'in')
@@ -112,7 +210,7 @@ export const TransactionListView: React.FC = () => {
         <div>
           <h2>Buku Kas & Transaksi</h2>
           <p className="text-muted text-sm">
-            {activeStore?.branchName} • Riwayat seluruh arus uang kedai
+            {activeStore?.name} ({activeStore?.branchName}) • Riwayat seluruh arus uang kedai
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setIsAddTxOpen(true)}>
@@ -121,7 +219,7 @@ export const TransactionListView: React.FC = () => {
         </button>
       </div>
 
-      {/* Summary Chips */}
+      {/* Summary KPI Chips */}
       <div className="tx-summary-bar">
         <div className="summary-chip in-chip">
           <span className="chip-label">Total Masuk (Filter):</span>
@@ -139,23 +237,33 @@ export const TransactionListView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
+      {/* Comprehensive Filter Controls Card */}
       <div className="filter-controls-card">
-        {/* Search */}
-        <div className="search-box">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Cari transaksi, menu, bahan, atau kasir..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {/* Row 1: Search & Type Toggle */}
+        <div className="filter-row-top">
+          {/* Search Box with Clear Button */}
+          <div className="search-box">
+            <Search size={16} className="search-icon" />
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Cari transaksi, menu, belanja pasar, atau kasir..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button 
+                type="button" 
+                className="search-clear-btn" 
+                onClick={() => setSearchQuery('')}
+                title="Hapus pencarian"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
 
-        {/* Filters */}
-        <div className="filter-buttons-group">
-          {/* Type Filters */}
+          {/* Type Filter Buttons */}
           <div className="btn-group">
             <button
               className={`filter-btn ${filterType === 'all' ? 'active' : ''}`}
@@ -164,39 +272,212 @@ export const TransactionListView: React.FC = () => {
               Semua
             </button>
             <button
-              className={`filter-btn ${filterType === 'in' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-in ${filterType === 'in' ? 'active' : ''}`}
               onClick={() => setFilterType('in')}
             >
               Masuk
             </button>
             <button
-              className={`filter-btn ${filterType === 'out' ? 'active' : ''}`}
+              className={`filter-btn filter-btn-out ${filterType === 'out' ? 'active' : ''}`}
               onClick={() => setFilterType('out')}
             >
               Keluar
             </button>
           </div>
+        </div>
+
+        {/* Row 2: Date Filters & Payment Method */}
+        <div className="filter-row-middle">
+          {/* Date Filter Buttons */}
+          <div className="filter-item-wrap">
+            <span className="filter-field-label">
+              <Calendar size={13} /> Waktu:
+            </span>
+            <div className="btn-group">
+              <button
+                className={`filter-btn ${dateFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setDateFilter('all')}
+              >
+                Semua
+              </button>
+              <button
+                className={`filter-btn ${dateFilter === 'today' ? 'active' : ''}`}
+                onClick={() => setDateFilter('today')}
+              >
+                Hari Ini
+              </button>
+              <button
+                className={`filter-btn ${dateFilter === '7days' ? 'active' : ''}`}
+                onClick={() => setDateFilter('7days')}
+              >
+                7 Hari
+              </button>
+              <button
+                className={`filter-btn ${dateFilter === 'month' ? 'active' : ''}`}
+                onClick={() => setDateFilter('month')}
+              >
+                Bulan Ini
+              </button>
+              <button
+                className={`filter-btn ${dateFilter === 'custom' ? 'active' : ''}`}
+                onClick={() => setDateFilter('custom')}
+              >
+                Kustom
+              </button>
+            </div>
+          </div>
 
           {/* Payment Method Filter */}
-          <div className="btn-group">
-            <button
-              className={`filter-btn ${filterMethod === 'all' ? 'active' : ''}`}
-              onClick={() => setFilterMethod('all')}
+          <div className="filter-item-wrap">
+            <span className="filter-field-label">
+              <Coins size={13} /> Metode:
+            </span>
+            <div className="btn-group">
+              <button
+                className={`filter-btn ${filterMethod === 'all' ? 'active' : ''}`}
+                onClick={() => setFilterMethod('all')}
+              >
+                Semua
+              </button>
+              <button
+                className={`filter-btn ${filterMethod === 'cash' ? 'active' : ''}`}
+                onClick={() => setFilterMethod('cash')}
+              >
+                Tunai
+              </button>
+              <button
+                className={`filter-btn ${filterMethod === 'qris' ? 'active' : ''}`}
+                onClick={() => setFilterMethod('qris')}
+              >
+                QRIS
+              </button>
+              <button
+                className={`filter-btn ${filterMethod === 'transfer' ? 'active' : ''}`}
+                onClick={() => setFilterMethod('transfer')}
+              >
+                Transfer
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Custom Date Range (Conditional) */}
+        {dateFilter === 'custom' && (
+          <div className="custom-date-row">
+            <div className="date-input-group">
+              <label>Dari Tanggal:</label>
+              <input
+                type="date"
+                className="date-picker-input"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+              />
+            </div>
+            <div className="date-input-group">
+              <label>Sampai Tanggal:</label>
+              <input
+                type="date"
+                className="date-picker-input"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Row 4: Category Filter & Sorting Selectors */}
+        <div className="filter-row-bottom">
+          {/* Category Selector */}
+          <div className="filter-select-wrap">
+            <label className="filter-field-label">
+              <Tag size={13} /> Kategori:
+            </label>
+            <select
+              className="filter-custom-select"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
             >
-              Semua Metode
-            </button>
-            <button
-              className={`filter-btn ${filterMethod === 'cash' ? 'active' : ''}`}
-              onClick={() => setFilterMethod('cash')}
+              <option value="all">Semua Kategori</option>
+              <optgroup label="Pemasukan">
+                {categories.filter(c => c.type === 'in').map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Pengeluaran">
+                {categories.filter(c => c.type === 'out').map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
+          {/* Sorting Selector */}
+          <div className="filter-select-wrap">
+            <label className="filter-field-label">
+              <ArrowUpDown size={13} /> Urutan:
+            </label>
+            <select
+              className="filter-custom-select"
+              value={sortBy}
+              onChange={(e: any) => setSortBy(e.target.value)}
             >
-              Tunai (Laci)
-            </button>
+              <option value="date-desc">Waktu Terbaru ↓</option>
+              <option value="date-asc">Waktu Terlama ↑</option>
+              <option value="amount-desc">Nominal Tertinggi (Rp) ↓</option>
+              <option value="amount-asc">Nominal Terendah (Rp) ↑</option>
+            </select>
+          </div>
+
+          {/* Reset All Filters Button */}
+          {hasActiveFilters && (
             <button
-              className={`filter-btn ${filterMethod === 'qris' ? 'active' : ''}`}
-              onClick={() => setFilterMethod('qris')}
+              type="button"
+              className="btn btn-outline btn-sm reset-filter-btn"
+              onClick={handleResetFilters}
             >
-              QRIS
+              <RotateCcw size={14} />
+              <span>Reset Filter</span>
             </button>
+          )}
+        </div>
+
+        {/* Active Filter Tags Bar */}
+        <div className="active-filters-info">
+          <span className="results-count-text">
+            Menampilkan <strong>{filteredList.length}</strong> dari {transactions.length} transaksi
+          </span>
+
+          <div className="active-tags-list">
+            {searchQuery && (
+              <span className="active-tag">
+                Cari: "{searchQuery}"
+                <X size={12} onClick={() => setSearchQuery('')} />
+              </span>
+            )}
+            {filterType !== 'all' && (
+              <span className="active-tag">
+                {filterType === 'in' ? 'Pemasukan' : 'Pengeluaran'}
+                <X size={12} onClick={() => setFilterType('all')} />
+              </span>
+            )}
+            {filterMethod !== 'all' && (
+              <span className="active-tag">
+                Metode: {filterMethod.toUpperCase()}
+                <X size={12} onClick={() => setFilterMethod('all')} />
+              </span>
+            )}
+            {dateFilter !== 'all' && (
+              <span className="active-tag">
+                Waktu: {dateFilter === 'today' ? 'Hari Ini' : dateFilter === '7days' ? '7 Hari' : dateFilter === 'month' ? 'Bulan Ini' : 'Kustom'}
+                <X size={12} onClick={() => setDateFilter('all')} />
+              </span>
+            )}
+            {filterCategory !== 'all' && (
+              <span className="active-tag">
+                Kategori: {categories.find(c => c.id === filterCategory)?.name || filterCategory}
+                <X size={12} onClick={() => setFilterCategory('all')} />
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -207,7 +488,17 @@ export const TransactionListView: React.FC = () => {
           <div className="empty-state">Memuat data transaksi...</div>
         ) : filteredList.length === 0 ? (
           <div className="empty-state">
-            <p className="text-muted">Tidak ada transaksi yang cocok dengan pencarian / filter.</p>
+            <p className="text-muted">Tidak ada transaksi yang cocok dengan kriteria pencarian atau filter.</p>
+            {hasActiveFilters && (
+              <button 
+                type="button"
+                className="btn btn-outline btn-sm mt-2" 
+                onClick={handleResetFilters}
+              >
+                <RotateCcw size={14} />
+                <span>Reset Semua Filter</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="tx-table-wrap">
@@ -235,8 +526,18 @@ export const TransactionListView: React.FC = () => {
                     </td>
                     <td>
                       <span className={`payment-badge ${tx.paymentMethod}`}>
-                        {tx.paymentMethod === 'cash' ? <Coins size={12} /> : <CreditCard size={12} />}
-                        {tx.paymentMethod === 'cash' ? 'Tunai' : 'QRIS'}
+                        {tx.paymentMethod === 'cash' ? (
+                          <Coins size={12} />
+                        ) : tx.paymentMethod === 'qris' ? (
+                          <CreditCard size={12} />
+                        ) : (
+                          <Building2 size={12} />
+                        )}
+                        {tx.paymentMethod === 'cash' 
+                          ? 'Tunai' 
+                          : tx.paymentMethod === 'qris' 
+                          ? 'QRIS' 
+                          : 'Transfer'}
                       </span>
                     </td>
                     <td className="tx-col-actor">

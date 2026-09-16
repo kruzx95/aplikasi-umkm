@@ -72,6 +72,14 @@ export interface Shift {
   notes?: string;
 }
 
+export interface DebtPayment {
+  amount: number;
+  date: string;
+  paymentMethod: 'cash' | 'qris' | 'transfer';
+  note?: string;
+  actorName?: string;
+}
+
 export interface Debt {
   id: string;
   tenantId: string;
@@ -80,11 +88,13 @@ export interface Debt {
   phone?: string;
   type: 'piutang' | 'utang'; // piutang: orang ngutang ke kedai, utang: kedai ngutang ke supplier
   amount: number;
+  originalAmount?: number; // nominal awal sebelum dicicil
   dueDate: string;
   status: 'unpaid' | 'paid';
   description: string;
   createdAt: string;
   paidAt?: string;
+  paymentHistory?: DebtPayment[];
 }
 
 export type ActionType = 
@@ -94,10 +104,17 @@ export type ActionType =
   | 'SHIFT_CLOSE'
   | 'DEBT_ADD'
   | 'DEBT_PAY'
+  | 'DEBT_INSTALLMENT'
   | 'TENANT_CREATE'
+  | 'TENANT_UPDATE'
+  | 'TENANT_DELETE'
   | 'SUBSCRIPTION_UPDATE'
   | 'STORE_ADD'
-  | 'STORE_UPDATE';
+  | 'STORE_UPDATE'
+  | 'CATEGORY_ADD'
+  | 'CATEGORY_DELETE'
+  | 'DATA_BACKUP'
+  | 'DATA_RESTORE';
 
 export interface AuditLog {
   id: string;

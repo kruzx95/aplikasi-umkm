@@ -16,7 +16,10 @@ import {
   Sun,
   Moon,
   X,
-  ChevronRight
+  ChevronRight,
+  Database,
+  Tag,
+  ShieldCheck
 } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
@@ -27,10 +30,14 @@ export const BottomNav: React.FC = () => {
     setIsAddTxOpen, 
     setIsStoreModalOpen, 
     setIsShiftModalOpen,
+    setIsBackupModalOpen,
+    setIsCategoryModalOpen,
+    setIsRoleModalOpen,
     activeShift,
     activeStore,
     theme,
-    toggleTheme
+    toggleTheme,
+    overdueDebtsCount
   } = useApp();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -112,8 +119,13 @@ export const BottomNav: React.FC = () => {
           className={`nav-item ${activeTab === 'debts' ? 'active' : ''}`}
           onClick={() => setActiveTab('debts')}
         >
-          <div className="nav-icon-wrap">
+          <div className="nav-icon-wrap relative-icon-wrap">
             <BookOpen size={20} />
+            {overdueDebtsCount > 0 && (
+              <span className="mobile-overdue-badge" title={`${overdueDebtsCount} kasbon melewati jatuh tempo`}>
+                {overdueDebtsCount}
+              </span>
+            )}
           </div>
           <span>Kasbon</span>
         </button>
@@ -169,8 +181,13 @@ export const BottomNav: React.FC = () => {
           className={`nav-item ${activeTab === 'debts' ? 'active' : ''}`}
           onClick={() => setActiveTab('debts')}
         >
-          <div className="nav-icon-wrap">
+          <div className="nav-icon-wrap relative-icon-wrap">
             <BookOpen size={20} />
+            {overdueDebtsCount > 0 && (
+              <span className="mobile-overdue-badge" title={`${overdueDebtsCount} kasbon melewati jatuh tempo`}>
+                {overdueDebtsCount}
+              </span>
+            )}
           </div>
           <span>Kasbon</span>
         </button>
@@ -205,6 +222,29 @@ export const BottomNav: React.FC = () => {
             </div>
 
             <div className="menu-drawer-list">
+              {/* Ganti Peran Pengguna Tile */}
+              <button 
+                className="menu-tile role-drawer-tile"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsRoleModalOpen(true);
+                }}
+              >
+                <div className="menu-tile-icon icon-emerald">
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="menu-tile-info">
+                  <strong>Ganti Peran Pengguna</strong>
+                  <span className="text-muted text-xs">
+                    Peran Aktif: 🏪 Pemilik Kedai (Owner)
+                  </span>
+                </div>
+                <span className="badge badge-emerald">
+                  Ganti
+                </span>
+                <ChevronRight size={16} className="text-muted" />
+              </button>
+
               {/* Shift & Laci */}
               <button 
                 className={`menu-tile ${activeTab === 'shift' ? 'active' : ''}`}
@@ -249,6 +289,42 @@ export const BottomNav: React.FC = () => {
                 <div className="menu-tile-info">
                   <strong>Audit Log Kedai</strong>
                   <span className="text-muted text-xs">Rekam jejak penghapusan kas & anti-fraud</span>
+                </div>
+                <ChevronRight size={16} className="text-muted" />
+              </button>
+
+              {/* Cadangan & Pemulihan Data */}
+              <button 
+                className="menu-tile"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsBackupModalOpen(true);
+                }}
+              >
+                <div className="menu-tile-icon icon-emerald">
+                  <Database size={20} />
+                </div>
+                <div className="menu-tile-info">
+                  <strong>Cadangan Data (Backup & Restore)</strong>
+                  <span className="text-muted text-xs">Simpan / pulihkan file database JSON</span>
+                </div>
+                <ChevronRight size={16} className="text-muted" />
+              </button>
+
+              {/* Kelola Kategori Pos Kas */}
+              <button 
+                className="menu-tile"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsCategoryModalOpen(true);
+                }}
+              >
+                <div className="menu-tile-icon icon-purple">
+                  <Tag size={20} />
+                </div>
+                <div className="menu-tile-info">
+                  <strong>Kelola Kategori Pos Kas</strong>
+                  <span className="text-muted text-xs">Atur pos pemasukan & pengeluaran kedai</span>
                 </div>
                 <ChevronRight size={16} className="text-muted" />
               </button>

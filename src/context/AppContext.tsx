@@ -29,6 +29,10 @@ interface AppContextType {
   isOnline: boolean;
   refreshAllData: () => Promise<void>;
   
+  // Overdue Kasbon Counter
+  overdueDebtsCount: number;
+  refreshOverdueDebtsCount: () => Promise<void>;
+
   // Modal Triggers
   isAddTxOpen: boolean;
   setIsAddTxOpen: (open: boolean) => void;
@@ -36,6 +40,17 @@ interface AppContextType {
   setIsShiftModalOpen: (open: boolean) => void;
   isStoreModalOpen: boolean;
   setIsStoreModalOpen: (open: boolean) => void;
+  isBackupModalOpen: boolean;
+  setIsBackupModalOpen: (open: boolean) => void;
+  isCategoryModalOpen: boolean;
+  setIsCategoryModalOpen: (open: boolean) => void;
+  isRoleModalOpen: boolean;
+  setIsRoleModalOpen: (open: boolean) => void;
+
+  // Impersonation
+  isImpersonating: boolean;
+  startImpersonation: (tenant: Tenant) => Promise<void>;
+  exitImpersonation: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -52,10 +67,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
+  const [overdueDebtsCount, setOverdueDebtsCount] = useState<number>(0);
+  const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
+
   // Modals
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
   // Online / Offline listener
   useEffect(() => {
@@ -78,6 +99,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  const refreshOverdueDebtsCount = async () => {
+    if (!activeStore) {
+      setOverdueDebtsCount(0);
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const count = await db.debts
+      .where('storeId')
+      .equals(activeStore.id)
+      .filter(d => d.status === 'unpaid' && d.dueDate < today)
+      .count();
+    setOverdueDebtsCount(count);
+  };
+
   // Initial seed and load
   const loadData = async () => {
     await seedInitialDataIfNeeded();
@@ -95,6 +130,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const defaultStore = tenantStores.find(s => s.id === 'store-roy-ruko') || tenantStores[0];
         setActiveStoreState(defaultStore);
       }
+    } else {
+      setActiveTenantState(null);
+      setStores([]);
+      setActiveStoreState(null);
+      setRoleState('superadmin');
+      setActiveTab('admin-tenants');
     }
   };
 
@@ -116,6 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (activeStore) {
       refreshActiveShift();
+      refreshOverdueDebtsCount();
     }
   }, [activeStore]);
 
@@ -156,14 +198,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshAllData = async () => {
     const allTenants = await db.tenants.toArray();
     setTenants(allTenants);
-    if (activeTenant) {
+    if (allTenants.length === 0) {
+      setActiveTenantState(null);
+      setStores([]);
+      setActiveStoreState(null);
+      setRoleState('superadmin');
+      setActiveTab('admin-tenants');
+    } else if (activeTenant) {
       const updatedTenant = await db.tenants.get(activeTenant.id);
-      if (updatedTenant) setActiveTenantState(updatedTenant);
-
-      const tenantStores = await db.stores.where('tenantId').equals(activeTenant.id).toArray();
-      setStores(tenantStores);
+      if (updatedTenant) {
+        setActiveTenantState(updatedTenant);
+        const tenantStores = await db.stores.where('tenantId').equals(activeTenant.id).toArray();
+        setStores(tenantStores);
+      } else {
+        // Active tenant was deleted, fallback to first remaining
+        const nextTenant = allTenants[0];
+        setActiveTenantState(nextTenant);
+        const nextStores = await db.stores.where('tenantId').equals(nextTenant.id).toArray();
+        setStores(nextStores);
+        setActiveStoreState(nextStores[0] || null);
+      }
     }
     await refreshActiveShift();
+    await refreshOverdueDebtsCount();
+  };
+
+  const startImpersonation = async (tenant: Tenant) => {
+    setIsImpersonating(true);
+    setActiveTenantState(tenant);
+    const tenantStores = await db.stores.where('tenantId').equals(tenant.id).toArray();
+    setStores(tenantStores);
+    if (tenantStores.length > 0) {
+      setActiveStoreState(tenantStores[0]);
+    } else {
+      setActiveStoreState(null);
+    }
+    setRoleState('owner');
+    setCurrentActorName(`Superadmin (${tenant.ownerName})`);
+    setActiveTab('dashboard');
+  };
+
+  const exitImpersonation = () => {
+    setIsImpersonating(false);
+    setRoleState('superadmin');
+    setCurrentActorName('Superadmin Platform (Kruza)');
+    setActiveTab('admin-tenants');
   };
 
   return (
@@ -187,12 +266,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         isOnline,
         refreshAllData,
+        overdueDebtsCount,
+        refreshOverdueDebtsCount,
+        isImpersonating,
+        startImpersonation,
+        exitImpersonation,
         isAddTxOpen,
         setIsAddTxOpen,
         isShiftModalOpen,
         setIsShiftModalOpen,
         isStoreModalOpen,
         setIsStoreModalOpen,
+        isBackupModalOpen,
+        setIsBackupModalOpen,
+        isCategoryModalOpen,
+        setIsCategoryModalOpen,
+        isRoleModalOpen,
+        setIsRoleModalOpen,
       }}
     >
       {children}

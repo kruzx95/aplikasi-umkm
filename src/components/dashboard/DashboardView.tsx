@@ -17,6 +17,8 @@ import {
   AlertCircle,
   Calendar
 } from 'lucide-react';
+import { TrendChart7Days } from './TrendChart7Days';
+import { PaymentMethodDonut } from './PaymentMethodDonut';
 
 export const DashboardView: React.FC = () => {
   const { 
@@ -30,6 +32,7 @@ export const DashboardView: React.FC = () => {
   } = useApp();
 
   const [todayTransactions, setTodayTransactions] = useState<Transaction[]>([]);
+  const [weekTransactions, setWeekTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -43,6 +46,14 @@ export const DashboardView: React.FC = () => {
         .equals(activeStore.id)
         .reverse()
         .sortBy('createdAt');
+
+      // Filter last 7 days (today - 6 days through today)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+      const weekList = txs.filter(t => t.date >= sevenDaysAgoStr && t.date <= todayStr);
+      setWeekTransactions(weekList);
 
       // Filter today's transactions
       const todayList = txs.filter(t => t.date === todayStr);
@@ -221,6 +232,17 @@ export const DashboardView: React.FC = () => {
             <span>Kirim Rekap WA</span>
           </button>
         )}
+      </div>
+
+      {/* Visual Charts: 7-Day Trend & Payment Breakdown */}
+      <div className={`dashboard-charts-grid ${role === 'cashier' ? 'single-chart' : ''}`}>
+        {role !== 'cashier' && (
+          <TrendChart7Days transactions={weekTransactions} />
+        )}
+        <PaymentMethodDonut 
+          todayTransactions={todayTransactions} 
+          weekTransactions={weekTransactions} 
+        />
       </div>
 
       {/* Mini Visual Trend & Recent Transactions */}

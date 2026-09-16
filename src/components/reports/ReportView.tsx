@@ -13,14 +13,21 @@ import {
   Copy,
   CreditCard,
   Coins,
-  PieChart
+  PieChart,
+  Printer,
+  Loader2,
+  FileCheck2,
+  Sparkles,
+  Database
 } from 'lucide-react';
+import { generatePdfReport } from '../../utils/pdfGenerator';
 
 export const ReportView: React.FC = () => {
-  const { activeStore, activeTenant } = useApp();
+  const { activeStore, activeTenant, setIsBackupModalOpen } = useApp();
   const [period, setPeriod] = useState<'today' | '7days' | 'month'>('today');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [copied, setCopied] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -117,6 +124,43 @@ export const ReportView: React.FC = () => {
     return msg;
   };
 
+  // Export PDF Handler
+  const handleDownloadPdf = () => {
+    if (transactions.length === 0) {
+      alert('Tidak ada data transaksi pada periode ini untuk diekspor ke PDF.');
+      return;
+    }
+    setIsGeneratingPdf(true);
+    setTimeout(() => {
+      try {
+        generatePdfReport(
+          activeStore,
+          activeTenant,
+          period,
+          transactions,
+          {
+            totalIncome,
+            cashIncome,
+            qrisIncome,
+            totalExpense,
+            netProfit,
+            profitMargin
+          }
+        );
+      } catch (err) {
+        console.error('Failed to generate PDF:', err);
+        alert('Terjadi kendala saat menyusun dokumen PDF. Silakan coba kembali.');
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    }, 150);
+  };
+
+  // Direct Browser Print
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleCopyWhatsApp = () => {
     const text = generateWhatsAppMessage();
     navigator.clipboard.writeText(text);
@@ -156,8 +200,8 @@ export const ReportView: React.FC = () => {
 
   return (
     <div className="report-page-container">
-      {/* Header */}
-      <div className="page-header-flex">
+      {/* Header with Period & Action Buttons */}
+      <div className="report-header-wrap">
         <div>
           <h2>Laporan & Rekapitulasi</h2>
           <p className="text-muted text-sm">
@@ -165,37 +209,69 @@ export const ReportView: React.FC = () => {
           </p>
         </div>
 
-        {/* Period Selector */}
-        <div className="btn-group">
-          <button
-            className={`filter-btn ${period === 'today' ? 'active' : ''}`}
-            onClick={() => setPeriod('today')}
-          >
-            Hari Ini
-          </button>
-          <button
-            className={`filter-btn ${period === '7days' ? 'active' : ''}`}
-            onClick={() => setPeriod('7days')}
-          >
-            7 Hari
-          </button>
-          <button
-            className={`filter-btn ${period === 'month' ? 'active' : ''}`}
-            onClick={() => setPeriod('month')}
-          >
-            Bulan Ini
-          </button>
+        {/* Action Controls: Period Selector & PDF/Print Buttons */}
+        <div className="report-actions-toolbar">
+          {/* Period Selector */}
+          <div className="btn-group">
+            <button
+              className={`filter-btn ${period === 'today' ? 'active' : ''}`}
+              onClick={() => setPeriod('today')}
+            >
+              Hari Ini
+            </button>
+            <button
+              className={`filter-btn ${period === '7days' ? 'active' : ''}`}
+              onClick={() => setPeriod('7days')}
+            >
+              7 Hari
+            </button>
+            <button
+              className={`filter-btn ${period === 'month' ? 'active' : ''}`}
+              onClick={() => setPeriod('month')}
+            >
+              Bulan Ini
+            </button>
+          </div>
+
+          {/* Quick Export Actions */}
+          <div className="export-action-btns">
+            <button 
+              className="btn btn-primary btn-sm btn-export-pdf"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              title="Unduh dokumen PDF A4 lengkap"
+            >
+              {isGeneratingPdf ? <Loader2 size={15} className="spin-icon" /> : <FileText size={15} />}
+              <span>{isGeneratingPdf ? 'Menyiapkan...' : 'Unduh PDF'}</span>
+            </button>
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={handlePrint}
+              title="Cetak langsung lewat printer / browser"
+            >
+              <Printer size={15} />
+              <span>Cetak</span>
+            </button>
+            <button 
+              className="btn btn-outline btn-sm"
+              onClick={handleExportCSV}
+              title="Unduh file Excel / CSV"
+            >
+              <Download size={15} />
+              <span>Excel</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* WhatsApp Share Banner (Highlight Feature) */}
+      {/* WhatsApp Share Banner */}
       <div className="card wa-share-card">
         <div className="wa-card-content">
           <div className="wa-icon-badge">
             <Share2 size={24} className="text-emerald" />
           </div>
           <div>
-            <h3>Kirim Laporan ke WhatsApp Pemilik / Mitra</h3>
+            <h3>Kirim Ringkasan ke WhatsApp Pemilik / Mitra</h3>
             <p className="text-muted text-sm">
               Salin ringkasan omset, belanja, dan laba bersih ke pesan WhatsApp yang rapi dalam 1 klik.
             </p>
@@ -241,7 +317,7 @@ export const ReportView: React.FC = () => {
         </div>
       </div>
 
-      {/* Category Expenses Breakdown & Export Options */}
+      {/* Category Expenses Breakdown & PDF Feature Card */}
       <div className="report-detail-grid">
         {/* Category Breakdown */}
         <div className="card">
@@ -274,20 +350,93 @@ export const ReportView: React.FC = () => {
           )}
         </div>
 
-        {/* Preview WA Format & Export Options */}
-        <div className="card">
+        {/* Dedicated PDF Document Card */}
+        <div className="card pdf-feature-card">
           <div className="card-header-flex">
-            <h3>Format Teks Pesan WhatsApp</h3>
-            <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>
-              <Download size={14} />
-              <span>Unduh Excel (CSV)</span>
-            </button>
+            <div className="pdf-header-title">
+              <div className="icon-badge icon-badge-emerald">
+                <FileCheck2 size={18} />
+              </div>
+              <div>
+                <h3>Dokumen PDF Resmi Kedai</h3>
+                <p className="text-muted text-sm">Standar A4 siap cetak & arsip pembukuan</p>
+              </div>
+            </div>
+            <span className="badge badge-emerald">
+              <Sparkles size={11} /> Format A4
+            </span>
           </div>
 
-          <pre className="wa-preview-box">
-            {generateWhatsAppMessage()}
-          </pre>
+          <div className="pdf-features-list">
+            <div className="pdf-feature-item">
+              <span className="pdf-check">✓</span>
+              <span>Kop toko lengkap dengan nama cabang, alamat & kontak</span>
+            </div>
+            <div className="pdf-feature-item">
+              <span className="pdf-check">✓</span>
+              <span>3 Kartu ringkasan omset, belanja & laba bersih</span>
+            </div>
+            <div className="pdf-feature-item">
+              <span className="pdf-check">✓</span>
+              <span>Tabel rekapitulasi pos biaya & persentase</span>
+            </div>
+            <div className="pdf-feature-item">
+              <span className="pdf-check">✓</span>
+              <span>Daftar seluruh transaksi {transactions.length} baris dengan penomoran halaman</span>
+            </div>
+            <div className="pdf-feature-item">
+              <span className="pdf-check">✓</span>
+              <span>Kolom tanda tangan resmi Kasir & Pemilik Kedai</span>
+            </div>
+          </div>
+
+          <div className="pdf-card-actions">
+            <button 
+              className="btn btn-primary btn-lg btn-download-pdf-large"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+            >
+              {isGeneratingPdf ? <Loader2 size={18} className="spin-icon" /> : <FileText size={18} />}
+              <span>{isGeneratingPdf ? 'Menyusun Dokumen PDF...' : 'Unduh Dokumen PDF Resmi'}</span>
+            </button>
+            <button 
+              className="btn btn-outline btn-lg"
+              onClick={handlePrint}
+              title="Cetak langsung ke printer kasir / A4"
+            >
+              <Printer size={18} />
+              <span>Cetak Dokumen</span>
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Bottom Row: WhatsApp Text Preview & Excel CSV */}
+      <div className="card">
+        <div className="card-header-flex">
+          <div>
+            <h3>Format Teks Pesan WhatsApp</h3>
+            <p className="text-muted text-sm">Pratinjau pesan teks siap kirim ke grup atau chat pribadi</p>
+          </div>
+          <div className="card-header-actions">
+            <button className="btn btn-outline btn-sm" onClick={() => setIsBackupModalOpen(true)}>
+              <Database size={14} />
+              <span>Cadangan JSON</span>
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={handleCopyWhatsApp}>
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              <span>{copied ? 'Tersalin' : 'Salin Pesan'}</span>
+            </button>
+            <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>
+              <Download size={14} />
+              <span>Unduh CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <pre className="wa-preview-box">
+          {generateWhatsAppMessage()}
+        </pre>
       </div>
     </div>
   );
