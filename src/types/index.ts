@@ -39,12 +39,43 @@ export interface Category {
   isDefault?: boolean;
 }
 
+export type SalesChannel = 'offline' | 'gofood' | 'shopeefood' | 'grabfood';
+export type SettlementStatus = 'pending' | 'settled';
+
+export interface RawMaterial {
+  id: string;
+  tenantId: string;
+  storeId: string;
+  name: string;
+  category: string; // 'Bahan Utama' | 'Topping' | 'Minyak & Lemak' | 'Kemasan' | 'Lainnya'
+  currentStock: number;
+  unit: string; // 'kg' | 'butir' | 'liter' | 'kaleng' | 'pack' | 'pcs'
+  minStockAlert: number;
+  costPerUnit?: number;
+  lastRestockedAt?: string;
+  updatedAt: string;
+}
+
+export interface SettlementRecord {
+  id: string;
+  tenantId: string;
+  storeId: string;
+  channel: SalesChannel;
+  totalAmount: number;
+  transactionCount: number;
+  bankName: string;
+  bankAccountRef?: string;
+  settledAt: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface Transaction {
   id: string;
   tenantId: string;
   storeId: string;
   type: TransactionType;
-  amount: number;
+  amount: number; // Net amount yang masuk ke kas/buku kas
   paymentMethod: PaymentMethod;
   categoryId: string;
   categoryName: string;
@@ -55,6 +86,21 @@ export interface Transaction {
   createdByName: string;
   shiftId?: string;
   createdAt: string;
+
+  // Fitur Online Food & Omnichannel
+  channel?: SalesChannel; // default: 'offline'
+  grossAmount?: number; // Nilai kotor penjualan aplikasi (sebelum komisi)
+  commissionRate?: number; // Persentase komisi (misal: 20)
+  commissionAmount?: number; // Nilai potongan komisi platform (misal: Rp 13.100)
+  netAmount?: number; // Nilai bersih yang didapatkan toko
+  settlementStatus?: SettlementStatus; // 'pending' jika masih di saldo aplikasi, 'settled' jika sudah cair
+  settlementBank?: string; // Bank pencairan (BCA, Mandiri, BRI, dll)
+  settledAt?: string; // Waktu dicairkan ke bank
+  externalOrderId?: string; // Nomor pesanan aplikasi (misal: F-3358527824)
+
+  // Fitur Tautkan Belanja Bahan Mentah
+  rawMaterialId?: string;
+  rawMaterialQtyAdded?: number;
 }
 
 export interface Shift {
@@ -114,7 +160,11 @@ export type ActionType =
   | 'CATEGORY_ADD'
   | 'CATEGORY_DELETE'
   | 'DATA_BACKUP'
-  | 'DATA_RESTORE';
+  | 'DATA_RESTORE'
+  | 'ONLINE_FOOD_ADD'
+  | 'SETTLEMENT_PROCESSED'
+  | 'RAW_MATERIAL_UPDATE'
+  | 'RAW_MATERIAL_RESTOCK';
 
 export interface AuditLog {
   id: string;
@@ -128,3 +178,4 @@ export interface AuditLog {
   metadata?: Record<string, any>;
   timestamp: string; // ISO string
 }
+

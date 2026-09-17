@@ -1,7 +1,8 @@
 import { db } from './database';
-import { Category, Tenant, Store, Transaction, Shift, Debt, AuditLog } from '../types';
+import { Category, Tenant, Store, Transaction, Shift, Debt, AuditLog, RawMaterial } from '../types';
 
 export const DEFAULT_CATEGORIES: Category[] = [
+
   // Pemasukan
   { id: 'cat_in_sales', name: 'Penjualan Menu Makanan & Minuman', type: 'in', icon: 'UtensilsCrossed', color: '#10b981', isDefault: true },
   { id: 'cat_in_konsinyasi', name: 'Titip Jual / Konsinyasi', type: 'in', icon: 'ShoppingBag', color: '#059669', isDefault: true },
@@ -19,6 +20,245 @@ export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'cat_out_other', name: 'Pengeluaran Lain-lain', type: 'out', icon: 'MoreHorizontal', color: '#64748b', isDefault: true },
 ];
 
+export const SAMPLE_RAW_MATERIALS: RawMaterial[] = [
+  {
+    id: 'rm-terigu',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Terigu Protein Sedang (Segitiga Biru)',
+    category: 'Bahan Utama',
+    currentStock: 25,
+    unit: 'kg',
+    minStockAlert: 10,
+    costPerUnit: 12500,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-telur',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Telur Ayam Negeri Segar',
+    category: 'Bahan Utama',
+    currentStock: 4, // Status: Menipis! (min: 8)
+    unit: 'kg',
+    minStockAlert: 8,
+    costPerUnit: 28000,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-margarin',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Margarin Serbaguna BlueBand',
+    category: 'Minyak & Lemak',
+    currentStock: 12,
+    unit: 'kg',
+    minStockAlert: 5,
+    costPerUnit: 34000,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-keju',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Keju Cheddar Olahan Prochiz Gold',
+    category: 'Topping',
+    currentStock: 1, // Status: Kritis / Habis! (min: 3)
+    unit: 'blok',
+    minStockAlert: 3,
+    costPerUnit: 22000,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-cokelat',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Cokelat Butir / Meses Hagelslag',
+    category: 'Topping',
+    currentStock: 6,
+    unit: 'kg',
+    minStockAlert: 2,
+    costPerUnit: 38000,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-susu',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Susu Kental Manis Carnation',
+    category: 'Topping',
+    currentStock: 18,
+    unit: 'kaleng',
+    minStockAlert: 6,
+    costPerUnit: 13000,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-minyak',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Minyak Goreng Sawit',
+    category: 'Minyak & Lemak',
+    currentStock: 10,
+    unit: 'liter',
+    minStockAlert: 5,
+    costPerUnit: 16000,
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'rm-dus',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    name: 'Dus Kemasan Martabak Sablon',
+    category: 'Kemasan',
+    currentStock: 120,
+    unit: 'pcs',
+    minStockAlert: 50,
+    costPerUnit: 1200,
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export const SAMPLE_ONLINE_FOOD_TXS: Transaction[] = [
+  {
+    id: 'tx-gf-01',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    type: 'in',
+    amount: 52400,
+    paymentMethod: 'transfer',
+    categoryId: 'cat_in_sales',
+    categoryName: 'Penjualan Menu Makanan & Minuman',
+    description: 'GoFood Pesan Antar | F-3358527824',
+    date: new Date().toISOString().split('T')[0],
+    time: '20:40',
+    createdByRole: 'cashier',
+    createdByName: 'Bima (Kasir Pagi)',
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    channel: 'gofood',
+    grossAmount: 65500,
+    commissionRate: 20,
+    commissionAmount: 13100,
+    netAmount: 52400,
+    settlementStatus: 'pending',
+    externalOrderId: 'F-3358527824',
+  },
+  {
+    id: 'tx-gf-02',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    type: 'in',
+    amount: 132000,
+    paymentMethod: 'transfer',
+    categoryId: 'cat_in_sales',
+    categoryName: 'Penjualan Menu Makanan & Minuman',
+    description: 'GoFood Pesan Antar | F-3358535744',
+    date: new Date().toISOString().split('T')[0],
+    time: '20:27',
+    createdByRole: 'cashier',
+    createdByName: 'Bima (Kasir Pagi)',
+    createdAt: new Date(Date.now() - 3600000 * 2.5).toISOString(),
+    channel: 'gofood',
+    grossAmount: 165000,
+    commissionRate: 20,
+    commissionAmount: 33000,
+    netAmount: 132000,
+    settlementStatus: 'pending',
+    externalOrderId: 'F-3358535744',
+  },
+  {
+    id: 'tx-gf-03',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    type: 'in',
+    amount: 72400,
+    paymentMethod: 'transfer',
+    categoryId: 'cat_in_sales',
+    categoryName: 'Penjualan Menu Makanan & Minuman',
+    description: 'GoFood Pesan Antar | F-3358506298',
+    date: new Date().toISOString().split('T')[0],
+    time: '20:22',
+    createdByRole: 'cashier',
+    createdByName: 'Bima (Kasir Pagi)',
+    createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
+    channel: 'gofood',
+    grossAmount: 90500,
+    commissionRate: 20,
+    commissionAmount: 18100,
+    netAmount: 72400,
+    settlementStatus: 'pending',
+    externalOrderId: 'F-3358506298',
+  },
+  {
+    id: 'tx-gf-04',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    type: 'in',
+    amount: 40400,
+    paymentMethod: 'transfer',
+    categoryId: 'cat_in_sales',
+    categoryName: 'Penjualan Menu Makanan & Minuman',
+    description: 'GoFood Pesan Antar | F-3358503251',
+    date: new Date().toISOString().split('T')[0],
+    time: '20:16',
+    createdByRole: 'cashier',
+    createdByName: 'Bima (Kasir Pagi)',
+    createdAt: new Date(Date.now() - 3600000 * 3.5).toISOString(),
+    channel: 'gofood',
+    grossAmount: 50500,
+    commissionRate: 20,
+    commissionAmount: 10100,
+    netAmount: 40400,
+    settlementStatus: 'pending',
+    externalOrderId: 'F-3358503251',
+  },
+  {
+    id: 'tx-spf-01',
+    tenantId: 'tenant-mas-roy',
+    storeId: 'store-roy-ruko',
+    type: 'in',
+    amount: 68000,
+    paymentMethod: 'transfer',
+    categoryId: 'cat_in_sales',
+    categoryName: 'Penjualan Menu Makanan & Minuman',
+    description: 'ShopeeFood Order | SPF-7829104',
+    date: new Date().toISOString().split('T')[0],
+    time: '19:45',
+    createdByRole: 'cashier',
+    createdByName: 'Bima (Kasir Pagi)',
+    createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
+    channel: 'shopeefood',
+    grossAmount: 85000,
+    commissionRate: 20,
+    commissionAmount: 17000,
+    netAmount: 68000,
+    settlementStatus: 'pending',
+    externalOrderId: 'SPF-7829104',
+  }
+];
+
+export async function seedRawMaterialsIfNeeded() {
+  try {
+    const count = await db.raw_materials.count();
+    if (count === 0) {
+      await db.raw_materials.bulkPut(SAMPLE_RAW_MATERIALS);
+    }
+  } catch (err) {
+    console.warn('seedRawMaterialsIfNeeded warning:', err);
+  }
+}
+
+export async function seedOnlineFoodTxsIfNeeded() {
+  try {
+    const existingGf = await db.transactions.get('tx-gf-01');
+    if (!existingGf) {
+      await db.transactions.bulkPut(SAMPLE_ONLINE_FOOD_TXS);
+    }
+  } catch (err) {
+    console.warn('seedOnlineFoodTxsIfNeeded warning:', err);
+  }
+}
+
 export async function seedInitialDataIfNeeded() {
   const isFreshMode = localStorage.getItem('kaskedai_fresh_mode');
   if (isFreshMode === 'true') {
@@ -33,6 +273,8 @@ export async function seedInitialDataIfNeeded() {
   const tenantCount = await db.tenants.count();
   if (tenantCount > 0) {
     await seedHistoricalTransactionsIfNeeded();
+    await seedRawMaterialsIfNeeded();
+    await seedOnlineFoodTxsIfNeeded();
     return; // Data sudah ada
   }
 
@@ -370,6 +612,8 @@ export async function seedInitialDataIfNeeded() {
 
   // 8. Ensure 7 days of realistic history
   await seedHistoricalTransactionsIfNeeded();
+  await seedRawMaterialsIfNeeded();
+  await seedOnlineFoodTxsIfNeeded();
 }
 
 export async function seedHistoricalTransactionsIfNeeded() {
@@ -716,6 +960,8 @@ export async function resetDatabaseToFresh() {
   await db.tenants.clear();
   await db.audit_logs.clear();
   await db.categories.clear();
+  await db.raw_materials.clear();
+  await db.settlements.clear();
   await db.categories.bulkPut(DEFAULT_CATEGORIES);
 }
 
@@ -731,6 +977,10 @@ export async function restoreDemoSeedData() {
   await db.tenants.clear();
   await db.audit_logs.clear();
   await db.categories.clear();
+  await db.raw_materials.clear();
+  await db.settlements.clear();
   await seedInitialDataIfNeeded();
 }
+
+
 

@@ -18,12 +18,15 @@ import {
   Loader2,
   FileCheck2,
   Sparkles,
-  Database
+  Database,
+  ArrowRight,
+  ShoppingBag,
+  ArrowLeft
 } from 'lucide-react';
 import { generatePdfReport } from '../../utils/pdfGenerator';
 
 export const ReportView: React.FC = () => {
-  const { activeStore, activeTenant, setIsBackupModalOpen } = useApp();
+  const { activeStore, activeTenant, setActiveTab, setIsBackupModalOpen, setIsSettlementModalOpen } = useApp();
   const [period, setPeriod] = useState<'today' | '7days' | 'month'>('today');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [copied, setCopied] = useState(false);
@@ -77,6 +80,46 @@ export const ReportView: React.FC = () => {
   const netProfit = totalIncome - totalExpense;
   const profitMargin = totalIncome > 0 ? Math.round((netProfit / totalIncome) * 100) : 0;
 
+  // Multi-Channel Breakdown
+  const channelStats = {
+    offline: { label: 'Kasir Offline', count: 0, gross: 0, commission: 0, net: 0, color: '#10b981' },
+    gofood: { label: 'GoFood', count: 0, gross: 0, commission: 0, net: 0, color: '#ef4444' },
+    shopeefood: { label: 'ShopeeFood', count: 0, gross: 0, commission: 0, net: 0, color: '#f97316' },
+    grabfood: { label: 'GrabFood', count: 0, gross: 0, commission: 0, net: 0, color: '#059669' },
+  };
+
+  let totalGrossIncome = 0;
+  let totalCommissions = 0;
+  let totalPendingSettlement = 0;
+  let totalSettledOnline = 0;
+
+  transactions.filter(t => t.type === 'in').forEach(t => {
+    const ch = (t.channel || 'offline') as keyof typeof channelStats;
+    const gross = t.grossAmount ?? t.amount;
+    const comm = t.commissionAmount ?? 0;
+    const net = t.netAmount ?? t.amount;
+
+    if (channelStats[ch]) {
+      channelStats[ch].count += 1;
+      channelStats[ch].gross += gross;
+      channelStats[ch].commission += comm;
+      channelStats[ch].net += net;
+    }
+
+    totalGrossIncome += gross;
+    totalCommissions += comm;
+
+    if (ch !== 'offline') {
+      if (t.settlementStatus === 'pending') {
+        totalPendingSettlement += net;
+      } else {
+        totalSettledOnline += net;
+      }
+    }
+  });
+
+  const hasOnlineFoodOrders = channelStats.gofood.count > 0 || channelStats.shopeefood.count > 0 || channelStats.grabfood.count > 0;
+
   // Breakdown by Category
   const expenseByCategory = transactions
     .filter(t => t.type === 'out')
@@ -103,9 +146,33 @@ export const ReportView: React.FC = () => {
     msg += `🏪 *${activeStore?.name} - ${activeStore?.branchName}*\n`;
     msg += `📅 Tanggal: ${dateFormatted}\n\n`;
 
-    msg += `*💰 TOTAL OMSET / PEMASUKAN: ${formatRupiah(totalIncome)}*\n`;
-    msg += `  • Tunai Kasir: ${formatRupiah(cashIncome)}\n`;
-    msg += `  • QRIS / Transfer: ${formatRupiah(qrisIncome)}\n\n`;
+    msg += `*💰 TOTAL PENDAPATAN BERSIH: ${formatRupiah(totalIncome)}*\n`;
+    if (totalGrossIncome > totalIncome) {
+      msg += `  • Omset Kotor (Gross): ${formatRupiah(totalGrossIncome)}\n`;
+      msg += `  • Potongan Komisi Ojol: -${formatRupiah(totalCommissions)}\n`;
+    }
+    msg += `  • Pembayaran Tunai Kasir: ${formatRupiah(cashIncome)}\n`;
+    msg += `  • Non-Tunai (QRIS/Transfer/Ojol): ${formatRupiah(qrisIncome)}\n\n`;
+
+    if (hasOnlineFoodOrders) {
+      msg += `*🛵 RINCIAN KANAL PENJUALAN:*\n`;
+      if (channelStats.offline.count > 0) {
+        msg += `  • Kasir Offline: ${formatRupiah(channelStats.offline.net)} (${channelStats.offline.count} transaksi)\n`;
+      }
+      if (channelStats.gofood.count > 0) {
+        msg += `  • GoFood: Bersih ${formatRupiah(channelStats.gofood.net)} (Kotor: ${formatRupiah(channelStats.gofood.gross)}, Komisi: -${formatRupiah(channelStats.gofood.commission)} | ${channelStats.gofood.count} pesanan)\n`;
+      }
+      if (channelStats.shopeefood.count > 0) {
+        msg += `  • ShopeeFood: Bersih ${formatRupiah(channelStats.shopeefood.net)} (Kotor: ${formatRupiah(channelStats.shopeefood.gross)}, Komisi: -${formatRupiah(channelStats.shopeefood.commission)} | ${channelStats.shopeefood.count} pesanan)\n`;
+      }
+      if (channelStats.grabfood.count > 0) {
+        msg += `  • GrabFood: Bersih ${formatRupiah(channelStats.grabfood.net)} (Kotor: ${formatRupiah(channelStats.grabfood.gross)}, Komisi: -${formatRupiah(channelStats.grabfood.commission)} | ${channelStats.grabfood.count} pesanan)\n`;
+      }
+      if (totalPendingSettlement > 0) {
+        msg += `  ⏳ Saldo Ojol Belum Dicairkan ke Rekening: *${formatRupiah(totalPendingSettlement)}*\n`;
+      }
+      msg += `\n`;
+    }
 
     msg += `*🛒 TOTAL BELANJA & BEBAN: ${formatRupiah(totalExpense)}*\n`;
     if (sortedCategories.length > 0) {
@@ -144,7 +211,11 @@ export const ReportView: React.FC = () => {
             qrisIncome,
             totalExpense,
             netProfit,
-            profitMargin
+            profitMargin,
+            totalGrossIncome,
+            totalCommissions,
+            channelStats,
+            totalPendingSettlement
           }
         );
       } catch (err) {
@@ -175,13 +246,33 @@ export const ReportView: React.FC = () => {
       return;
     }
 
-    const headers = ['ID', 'Tanggal', 'Waktu', 'Tipe', 'Nominal', 'Metode', 'Kategori', 'Deskripsi', 'Pencatat'];
+    const headers = [
+      'ID', 
+      'Tanggal', 
+      'Waktu', 
+      'Tipe', 
+      'Kanal Penjualan', 
+      'Nominal Bersih', 
+      'Nominal Kotor', 
+      'Potongan Komisi', 
+      'Order ID Platform', 
+      'Status Pencairan', 
+      'Metode', 
+      'Kategori', 
+      'Deskripsi', 
+      'Pencatat'
+    ];
     const rows = transactions.map(t => [
       t.id,
       t.date,
       t.time,
       t.type === 'in' ? 'Pemasukan' : 'Pengeluaran',
+      t.channel ? t.channel.toUpperCase() : 'OFFLINE',
       t.amount,
+      t.grossAmount ?? t.amount,
+      t.commissionAmount ?? 0,
+      `"${(t.externalOrderId || '-').replace(/"/g, '""')}"`,
+      t.settlementStatus ? (t.settlementStatus === 'settled' ? 'Sudah Cair' : 'Belum Cair') : '-',
       t.paymentMethod.toUpperCase(),
       `"${t.categoryName}"`,
       `"${t.description.replace(/"/g, '""')}"`,
@@ -203,6 +294,14 @@ export const ReportView: React.FC = () => {
       {/* Header with Period & Action Buttons */}
       <div className="report-header-wrap">
         <div>
+          <button 
+            type="button" 
+            className="mobile-back-crumb-btn" 
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <ArrowLeft size={15} />
+            <span>Kembali ke Dashboard</span>
+          </button>
           <h2>Laporan & Rekapitulasi</h2>
           <p className="text-muted text-sm">
             {activeStore?.name} ({activeStore?.branchName}) • Evaluasi performa keuangan kedai
@@ -315,6 +414,106 @@ export const ReportView: React.FC = () => {
             <span>Margin Keuntungan: {profitMargin}%</span>
           </div>
         </div>
+      </div>
+
+      {/* Multi-Channel Sales Breakdown (Offline vs GoFood vs ShopeeFood vs GrabFood) */}
+      <div className="card channel-report-card">
+        <div className="card-header-flex">
+          <div>
+            <h3>Kinerja Penjualan Multi-Kanal & Ojek Online</h3>
+            <p className="text-muted text-sm">
+              Pantau omset kotor, potongan komisi platform, dan uang bersih diterima per saluran
+            </p>
+          </div>
+          {totalPendingSettlement > 0 && (
+            <button 
+              className="btn btn-outline btn-sm btn-settle-fast"
+              onClick={() => setIsSettlementModalOpen(true)}
+            >
+              <span>Rekonsiliasi Saldo ({formatRupiah(totalPendingSettlement)})</span>
+              <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Channel Grid 4 columns / responsive */}
+        <div className="channel-stats-grid">
+          {/* Offline Kasir */}
+          <div className="channel-stat-box">
+            <div className="channel-stat-header">
+              <span className="channel-badge offline">Kasir Offline Kedai</span>
+              <span className="channel-count">{channelStats.offline.count} nota</span>
+            </div>
+            <div className="channel-stat-amt text-emerald">{formatRupiah(channelStats.offline.net)}</div>
+            <div className="channel-stat-sub">
+              <span>Komisi: 0% (Rp 0)</span>
+              <span>Kotor = Bersih</span>
+            </div>
+          </div>
+
+          {/* GoFood */}
+          <div className="channel-stat-box">
+            <div className="channel-stat-header">
+              <span className="channel-badge gofood">GoFood</span>
+              <span className="channel-count">{channelStats.gofood.count} order</span>
+            </div>
+            <div className="channel-stat-amt text-emerald">{formatRupiah(channelStats.gofood.net)}</div>
+            <div className="channel-stat-sub">
+              <span>Kotor: {formatRupiah(channelStats.gofood.gross)}</span>
+              <span className="text-rose">Komisi: -{formatRupiah(channelStats.gofood.commission)}</span>
+            </div>
+          </div>
+
+          {/* ShopeeFood */}
+          <div className="channel-stat-box">
+            <div className="channel-stat-header">
+              <span className="channel-badge shopeefood">ShopeeFood</span>
+              <span className="channel-count">{channelStats.shopeefood.count} order</span>
+            </div>
+            <div className="channel-stat-amt text-emerald">{formatRupiah(channelStats.shopeefood.net)}</div>
+            <div className="channel-stat-sub">
+              <span>Kotor: {formatRupiah(channelStats.shopeefood.gross)}</span>
+              <span className="text-rose">Komisi: -{formatRupiah(channelStats.shopeefood.commission)}</span>
+            </div>
+          </div>
+
+          {/* GrabFood */}
+          <div className="channel-stat-box">
+            <div className="channel-stat-header">
+              <span className="channel-badge grabfood">GrabFood</span>
+              <span className="channel-count">{channelStats.grabfood.count} order</span>
+            </div>
+            <div className="channel-stat-amt text-emerald">{formatRupiah(channelStats.grabfood.net)}</div>
+            <div className="channel-stat-sub">
+              <span>Kotor: {formatRupiah(channelStats.grabfood.gross)}</span>
+              <span className="text-rose">Komisi: -{formatRupiah(channelStats.grabfood.commission)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Aggregate Summary Footer inside Card */}
+        {totalCommissions > 0 && (
+          <div className="channel-aggregate-summary">
+            <div className="summary-pill">
+              <span className="text-muted text-xs">Total Omset Kotor:</span>
+              <strong>{formatRupiah(totalGrossIncome)}</strong>
+            </div>
+            <div className="summary-pill highlight-rose">
+              <span className="text-rose text-xs">Total Komisi Platform:</span>
+              <strong className="text-rose">-{formatRupiah(totalCommissions)}</strong>
+            </div>
+            <div className="summary-pill highlight-emerald">
+              <span className="text-emerald text-xs">Pendapatan Bersih Masuk:</span>
+              <strong className="text-emerald">{formatRupiah(totalIncome)}</strong>
+            </div>
+            {totalPendingSettlement > 0 && (
+              <div className="summary-pill highlight-amber">
+                <span className="text-amber text-xs">Saldo Ojol Belum Cair:</span>
+                <strong className="text-amber">{formatRupiah(totalPendingSettlement)}</strong>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Category Expenses Breakdown & PDF Feature Card */}

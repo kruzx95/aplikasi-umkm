@@ -2,13 +2,22 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Store, Tenant, Transaction } from '../types';
 
-interface ReportSummary {
+export interface ReportSummary {
   totalIncome: number;
   cashIncome: number;
   qrisIncome: number;
   totalExpense: number;
   netProfit: number;
   profitMargin: number;
+  totalGrossIncome?: number;
+  totalCommissions?: number;
+  channelStats?: {
+    offline: { label: string; count: number; gross: number; commission: number; net: number };
+    gofood: { label: string; count: number; gross: number; commission: number; net: number };
+    shopeefood: { label: string; count: number; gross: number; commission: number; net: number };
+    grabfood: { label: string; count: number; gross: number; commission: number; net: number };
+  };
+  totalPendingSettlement?: number;
 }
 
 export function generatePdfReport(
@@ -149,8 +158,76 @@ export function generatePdfReport(
   doc.setTextColor(100, 116, 139);
   doc.text(`Margin Keuntungan: ${summary.profitMargin}%`, card3X + 3.5, currentY + 18);
 
-  // 4. Breakdown by Category (Table Ringkas)
+  // 4a. Multi-Channel Sales Breakdown (Offline vs GoFood vs ShopeeFood vs GrabFood)
   currentY = 60;
+  if (summary.channelStats) {
+    const activeChannels = Object.entries(summary.channelStats).filter(([_, st]) => st.count > 0);
+    if (activeChannels.length > 0) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text('Rekapitulasi Penjualan Multi-Kanal & Ojek Online', margin, currentY);
+
+      const chRows = activeChannels.map(([_, st], idx) => [
+        (idx + 1).toString(),
+        st.label,
+        `${st.count} nota`,
+        formatRupiah(st.gross),
+        st.commission > 0 ? `-${formatRupiah(st.commission)}` : 'Rp 0',
+        formatRupiah(st.net)
+      ]);
+
+      // Add Total summary row
+      chRows.push([
+        '',
+        'TOTAL OMSET / PENDAPATAN',
+        `${activeChannels.reduce((sum, [_, st]) => sum + st.count, 0)} nota`,
+        formatRupiah(summary.totalGrossIncome || summary.totalIncome),
+        summary.totalCommissions ? `-${formatRupiah(summary.totalCommissions)}` : 'Rp 0',
+        formatRupiah(summary.totalIncome)
+      ]);
+
+      autoTable(doc, {
+        startY: currentY + 3,
+        head: [['No', 'Kanal Penjualan', 'Volume', 'Omset Kotor', 'Potongan Komisi', 'Pendapatan Bersih']],
+        body: chRows,
+        theme: 'grid',
+        styles: {
+          fontSize: 7.5,
+          cellPadding: 2,
+          textColor: [51, 65, 85],
+          lineColor: [226, 232, 240],
+        },
+        headStyles: {
+          fillColor: [30, 41, 59], // Slate 800
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+        },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 'auto', fontStyle: 'bold' },
+          2: { cellWidth: 22, halign: 'center' },
+          3: { cellWidth: 30, halign: 'right' },
+          4: { cellWidth: 30, halign: 'right' },
+          5: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+        },
+        didParseCell: function(data) {
+          if (data.row.index === chRows.length - 1) {
+            data.cell.styles.fillColor = [241, 245, 249];
+            data.cell.styles.fontStyle = 'bold';
+            if (data.column.index === 5) {
+              data.cell.styles.textColor = [5, 150, 105];
+            }
+          }
+        },
+        margin: { left: margin, right: margin }
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 8;
+    }
+  }
+
+  // 4b. Breakdown by Category (Table Ringkas)
   const expenseByCategory = transactions
     .filter(t => t.type === 'out')
     .reduce((acc, t) => {
@@ -164,7 +241,7 @@ export function generatePdfReport(
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(30, 41, 59);
-    doc.text('Rincian Pos Belanja & Pengeluaran', margin, currentY);
+    doc.text('Rincian Pos Belanja & Pengeluaran Kedai', margin, currentY);
 
     const catRows = sortedCategories.map(([cat, amt], idx) => {
       const pct = summary.totalExpense > 0 ? Math.round((amt / summary.totalExpense) * 100) : 0;
@@ -211,12 +288,22 @@ export function generatePdfReport(
   doc.setTextColor(30, 41, 59);
   doc.text('Daftar Rincian Seluruh Transaksi', margin, currentY);
 
+  const getChannelLabel = (ch?: string) => {
+    switch (ch) {
+      case 'gofood': return 'GoFood';
+      case 'shopeefood': return 'Shopee';
+      case 'grabfood': return 'GrabFood';
+      default: return 'Kasir';
+    }
+  };
+
   const txRows = transactions.map((t, idx) => [
     (idx + 1).toString(),
     `${t.date}\n${t.time}`,
     t.type === 'in' ? 'Masuk' : 'Keluar',
+    t.type === 'in' ? getChannelLabel(t.channel) : '-',
     t.categoryName,
-    t.description || '-',
+    t.externalOrderId ? `${t.description || ''} (${t.externalOrderId})` : (t.description || '-'),
     t.paymentMethod.toUpperCase(),
     formatRupiah(t.amount),
     t.createdByName
@@ -224,12 +311,12 @@ export function generatePdfReport(
 
   autoTable(doc, {
     startY: currentY + 3,
-    head: [['No', 'Waktu', 'Tipe', 'Kategori', 'Keterangan', 'Metode', 'Nominal', 'Pencatat']],
+    head: [['No', 'Waktu', 'Tipe', 'Kanal', 'Kategori', 'Keterangan', 'Metode', 'Nominal', 'Pencatat']],
     body: txRows,
     theme: 'striped',
     styles: {
       fontSize: 7.5,
-      cellPadding: 2.5,
+      cellPadding: 2.2,
       textColor: [51, 65, 85],
       lineColor: [241, 245, 249],
       valign: 'middle'
@@ -244,13 +331,14 @@ export function generatePdfReport(
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 18, halign: 'center' },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 34 },
-      4: { cellWidth: 'auto' },
-      5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 26, halign: 'right' },
-      7: { cellWidth: 22 },
+      1: { cellWidth: 16, halign: 'center' },
+      2: { cellWidth: 13, halign: 'center' },
+      3: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+      4: { cellWidth: 28 },
+      5: { cellWidth: 'auto' },
+      6: { cellWidth: 14, halign: 'center' },
+      7: { cellWidth: 24, halign: 'right' },
+      8: { cellWidth: 20 },
     },
     didParseCell: function(data) {
       // Highlight type column

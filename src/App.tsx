@@ -14,6 +14,8 @@ import { StoreManagerModal } from './components/stores/StoreManagerModal';
 import { BackupRestoreModal } from './components/backup/BackupRestoreModal';
 import { CategoryManagerModal } from './components/categories/CategoryManagerModal';
 import { RoleSelectModal } from './components/layout/RoleSelectModal';
+import { SettlementModal } from './components/onlinefood/SettlementModal';
+import { RawMaterialView } from './components/inventory/RawMaterialView';
 import { 
   LayoutDashboard, 
   ReceiptText, 
@@ -25,7 +27,9 @@ import {
   TrendingUp, 
   ShieldCheck,
   Crown,
-  LogOut
+  LogOut,
+  Smartphone,
+  Layers
 } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
@@ -38,7 +42,10 @@ const MainAppContent: React.FC = () => {
     setIsBackupModalOpen,
     isRoleModalOpen,
     setIsRoleModalOpen,
+    setIsSettlementModalOpen,
     overdueDebtsCount,
+    pendingSettlementCount,
+    lowStockCount,
     isImpersonating,
     exitImpersonation,
     activeTenant
@@ -107,7 +114,31 @@ const MainAppContent: React.FC = () => {
                 onClick={() => setActiveTab('transactions')}
               >
                 <ReceiptText size={16} />
-                <span>Buku Kas Masuk & Keluar</span>
+                <span>Buku Kas</span>
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'inventory' ? 'active' : ''}`}
+                onClick={() => setActiveTab('inventory')}
+              >
+                <Layers size={16} />
+                <span>Stok Bahan</span>
+                {lowStockCount > 0 && (
+                  <span className="tab-overdue-badge badge-amber" title={`${lowStockCount} bahan baku mendekati habis!`}>
+                    {lowStockCount}
+                  </span>
+                )}
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'settlement' ? 'active' : ''}`}
+                onClick={() => setIsSettlementModalOpen(true)}
+              >
+                <Smartphone size={16} />
+                <span>Pencairan Online</span>
+                {pendingSettlementCount > 0 && (
+                  <span className="tab-overdue-badge badge-emerald" title={`${pendingSettlementCount} pesanan online food belum dicairkan`}>
+                    {pendingSettlementCount}
+                  </span>
+                )}
               </button>
               <button
                 className={`tab-btn ${activeTab === 'shift' ? 'active' : ''}`}
@@ -145,7 +176,7 @@ const MainAppContent: React.FC = () => {
                     onClick={() => setActiveTab('logs')}
                   >
                     <History size={16} />
-                    <span>Audit Log Toko</span>
+                    <span>Audit Log</span>
                   </button>
                 </>
               )}
@@ -165,6 +196,7 @@ const MainAppContent: React.FC = () => {
           <>
             {activeTab === 'dashboard' && role === 'owner' && <DashboardView />}
             {(activeTab === 'transactions' || (role === 'cashier' && activeTab === 'dashboard')) && <TransactionListView />}
+            {activeTab === 'inventory' && <RawMaterialView />}
             {activeTab === 'shift' && <DashboardView />}
             {activeTab === 'debts' && <DebtListView />}
             {activeTab === 'reports' && role === 'owner' && <ReportView />}
@@ -181,6 +213,7 @@ const MainAppContent: React.FC = () => {
       <CashRegisterShiftModal />
       <StoreManagerModal />
       <CategoryManagerModal />
+      <SettlementModal />
       <BackupRestoreModal 
         isOpen={isBackupModalOpen} 
         onClose={() => setIsBackupModalOpen(false)} 

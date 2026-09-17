@@ -19,7 +19,10 @@ import {
   ChevronRight,
   Database,
   Tag,
-  ShieldCheck
+  ShieldCheck,
+  Smartphone,
+  Layers,
+  ArrowLeft
 } from 'lucide-react';
 
 export const BottomNav: React.FC = () => {
@@ -33,11 +36,14 @@ export const BottomNav: React.FC = () => {
     setIsBackupModalOpen,
     setIsCategoryModalOpen,
     setIsRoleModalOpen,
+    setIsSettlementModalOpen,
     activeShift,
     activeStore,
     theme,
     toggleTheme,
-    overdueDebtsCount
+    overdueDebtsCount,
+    pendingSettlementCount,
+    lowStockCount
   } = useApp();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -212,11 +218,27 @@ export const BottomNav: React.FC = () => {
             <div className="modal-drag-handle"></div>
             
             <div className="menu-drawer-header">
-              <div>
+              <button 
+                type="button"
+                className="menu-back-btn" 
+                onClick={() => setIsMenuOpen(false)} 
+                aria-label="Kembali ke Layar Sebelumnya"
+              >
+                <ArrowLeft size={17} />
+                <span>Kembali</span>
+              </button>
+
+              <div className="menu-drawer-header-center">
                 <h3 className="menu-drawer-title">Menu & Fitur Kedai</h3>
                 <p className="text-muted text-xs">{activeStore?.name} • {activeStore?.branchName}</p>
               </div>
-              <button className="icon-btn" onClick={() => setIsMenuOpen(false)} aria-label="Tutup Menu">
+
+              <button 
+                type="button"
+                className="icon-btn menu-close-x-btn" 
+                onClick={() => setIsMenuOpen(false)} 
+                aria-label="Tutup Menu"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -242,6 +264,53 @@ export const BottomNav: React.FC = () => {
                 <span className="badge badge-emerald">
                   Ganti
                 </span>
+                <ChevronRight size={16} className="text-muted" />
+              </button>
+
+              {/* Pencairan Saldo Online Food Tile */}
+              <button 
+                className="menu-tile"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  setIsSettlementModalOpen(true);
+                }}
+              >
+                <div className="menu-tile-icon icon-emerald">
+                  <Smartphone size={20} />
+                </div>
+                <div className="menu-tile-info">
+                  <strong>Pencairan Saldo Online Food</strong>
+                  <span className="text-muted text-xs">
+                    GoFood, ShopeeFood, GrabFood ke Bank
+                  </span>
+                </div>
+                {pendingSettlementCount > 0 ? (
+                  <span className="badge badge-amber">{pendingSettlementCount} Belum Cair</span>
+                ) : (
+                  <span className="badge badge-emerald">Semua Cair</span>
+                )}
+                <ChevronRight size={16} className="text-muted" />
+              </button>
+
+              {/* Stok Bahan Baku Kedai Tile */}
+              <button 
+                className={`menu-tile ${activeTab === 'inventory' ? 'active' : ''}`}
+                onClick={() => handleSelectMenuItem('inventory')}
+              >
+                <div className="menu-tile-icon icon-blue">
+                  <Layers size={20} />
+                </div>
+                <div className="menu-tile-info">
+                  <strong>Stok Bahan Baku & Mentah</strong>
+                  <span className="text-muted text-xs">
+                    Pantau sisa persediaan & belanja pasar
+                  </span>
+                </div>
+                {lowStockCount > 0 ? (
+                  <span className="badge badge-danger">⚠️ {lowStockCount} Menipis</span>
+                ) : (
+                  <span className="badge badge-emerald">Aman</span>
+                )}
                 <ChevronRight size={16} className="text-muted" />
               </button>
 
@@ -360,6 +429,18 @@ export const BottomNav: React.FC = () => {
                   {theme === 'dark' ? '☀️ Terang' : '🌙 Gelap'}
                 </button>
               </div>
+            </div>
+
+            {/* Sticky/Pinned Bottom Close & Kembali Button */}
+            <div className="menu-drawer-footer">
+              <button 
+                type="button"
+                className="btn btn-secondary menu-footer-back-btn" 
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <ArrowLeft size={16} />
+                <span>Kembali / Tutup Menu</span>
+              </button>
             </div>
           </div>
         </div>

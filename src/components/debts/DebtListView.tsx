@@ -22,7 +22,8 @@ import {
   CreditCard,
   ChevronDown,
   ChevronUp,
-  RotateCcw
+  RotateCcw,
+  ArrowLeft
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -38,6 +39,7 @@ export const DebtListView: React.FC = () => {
     activeTenant, 
     role, 
     currentActorName, 
+    setActiveTab,
     refreshAllData,
     refreshOverdueDebtsCount 
   } = useApp();
@@ -376,6 +378,14 @@ export const DebtListView: React.FC = () => {
       {/* Page Header */}
       <div className="page-header-flex">
         <div>
+          <button 
+            type="button" 
+            className="mobile-back-crumb-btn" 
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <ArrowLeft size={15} />
+            <span>Kembali ke Dashboard</span>
+          </button>
           <h2>Buku Kasbon & Utang</h2>
           <p className="text-muted text-sm">
             {activeStore?.name} ({activeStore?.branchName}) • Kelola bon pelanggan, tempo supplier & pengingat WA

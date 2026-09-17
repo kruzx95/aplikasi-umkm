@@ -86,9 +86,9 @@ export const Navbar: React.FC = () => {
             <span className="status-text">{isOnline ? 'Online' : 'Offline'}</span>
           </div>
 
-          {/* Theme Switcher */}
+          {/* Theme Switcher — hidden on mobile since it is prominently in the mobile menu */}
           <button 
-            className="icon-btn" 
+            className="icon-btn hide-mobile" 
             onClick={toggleTheme} 
             title={theme === 'dark' ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
             aria-label="Toggle Theme"
@@ -96,9 +96,9 @@ export const Navbar: React.FC = () => {
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          {/* Database Backup & Restore Trigger */}
+          {/* Database Backup & Restore Trigger — hidden on mobile since it is prominently in the mobile menu */}
           <button 
-            className="icon-btn" 
+            className="icon-btn hide-mobile" 
             onClick={() => setIsBackupModalOpen(true)} 
             title="Cadangan & Pemulihan Database (Backup JSON)"
             aria-label="Backup & Restore Database"

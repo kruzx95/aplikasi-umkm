@@ -283,6 +283,128 @@
   }
 }
 
+/* Multi-Channel Sales Breakdown Styles */
+.channel-report-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.btn-settle-fast {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--primary-600);
+  border-color: rgba(16, 185, 129, 0.3);
+  background: var(--primary-50);
+  padding: 0.4rem 0.75rem;
+}
+
+.btn-settle-fast:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: var(--primary-500);
+}
+
+.channel-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 580px) {
+  .channel-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .channel-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.channel-stat-box {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.channel-stat-box:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.channel-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.channel-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.channel-stat-amt {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.channel-stat-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.channel-aggregate-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.summary-pill {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.8rem;
+  flex: 1 1 calc(50% - 0.5rem);
+}
+
+@media (min-width: 768px) {
+  .summary-pill {
+    flex: 1 1 auto;
+  }
+}
+
+.summary-pill.highlight-rose {
+  background: rgba(244, 63, 94, 0.06);
+  border-color: rgba(244, 63, 94, 0.2);
+}
+
+.summary-pill.highlight-emerald {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.summary-pill.highlight-amber {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
 /* Print Styles */
 @media print {
   .navbar,

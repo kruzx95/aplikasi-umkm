@@ -15,7 +15,9 @@ import {
   Share2, 
   Clock, 
   AlertCircle,
-  Calendar
+  Calendar,
+  Smartphone,
+  Layers
 } from 'lucide-react';
 import { TrendChart7Days } from './TrendChart7Days';
 import { PaymentMethodDonut } from './PaymentMethodDonut';
@@ -28,7 +30,11 @@ export const DashboardView: React.FC = () => {
     setIsAddTxOpen, 
     setIsShiftModalOpen, 
     activeShift,
-    setActiveTab 
+    setActiveTab,
+    pendingSettlementCount,
+    pendingSettlementTotal,
+    setIsSettlementModalOpen,
+    lowStockCount
   } = useApp();
 
   const [todayTransactions, setTodayTransactions] = useState<Transaction[]>([]);
@@ -216,6 +222,68 @@ export const DashboardView: React.FC = () => {
         )}
       </div>
 
+      {/* Omnichannel & Inventory Quick Alert Banner */}
+      <div className="dashboard-smart-widgets-grid">
+        {/* Widget 1: Online Food Settlement Tracker */}
+        <div className="smart-widget-card widget-settlement">
+          <div className="widget-icon-wrap bg-emerald-subtle">
+            <Smartphone size={20} className="text-emerald" />
+          </div>
+          <div className="widget-content">
+            <div className="widget-title-row">
+              <strong>Saldo Online Food Belum Cair</strong>
+              {pendingSettlementCount > 0 ? (
+                <span className="badge badge-amber">{pendingSettlementCount} Pesanan</span>
+              ) : (
+                <span className="badge badge-emerald">Semua Cair</span>
+              )}
+            </div>
+            <div className="widget-amount-row">
+              <span className="widget-amount text-emerald">{formatRupiah(pendingSettlementTotal)}</span>
+              <span className="widget-sub">GoFood • ShopeeFood • GrabFood</span>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-outline-emerald widget-btn"
+            onClick={() => setIsSettlementModalOpen(true)}
+          >
+            <span>Cek & Cairkan</span>
+          </button>
+        </div>
+
+        {/* Widget 2: Raw Material Inventory Alert */}
+        <div className={`smart-widget-card widget-inventory ${lowStockCount > 0 ? 'border-amber' : ''}`}>
+          <div className={`widget-icon-wrap ${lowStockCount > 0 ? 'bg-amber-subtle' : 'bg-blue-subtle'}`}>
+            <Layers size={20} className={lowStockCount > 0 ? 'text-amber' : 'text-blue'} />
+          </div>
+          <div className="widget-content">
+            <div className="widget-title-row">
+              <strong>Stok Bahan Baku Kedai</strong>
+              {lowStockCount > 0 ? (
+                <span className="badge badge-danger">⚠️ {lowStockCount} Menipis</span>
+              ) : (
+                <span className="badge badge-emerald">🟢 Stok Aman</span>
+              )}
+            </div>
+            <div className="widget-amount-row">
+              <span className="widget-sub">
+                {lowStockCount > 0 
+                  ? 'Ada bahan baku mendekati batas habis! Segera belanja pasar.' 
+                  : 'Seluruh stok bahan mentah mencukupi untuk operasional.'}
+              </span>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            className="btn btn-sm btn-secondary widget-btn"
+            onClick={() => setActiveTab('inventory')}
+          >
+            <span>Kelola Bahan</span>
+          </button>
+        </div>
+      </div>
+
       {/* Action Bar */}
       <div className="quick-actions-bar">
         <button className="btn btn-primary btn-lg action-btn-main" onClick={() => setIsAddTxOpen(true)}>
@@ -282,7 +350,16 @@ export const DashboardView: React.FC = () => {
                   <div className="tx-mini-details">
                     <span className="tx-desc">{tx.description || tx.categoryName}</span>
                     <span className="tx-meta">
-                      {tx.time} • <span className="payment-tag">{tx.paymentMethod.toUpperCase()}</span> • {tx.createdByName}
+                      {tx.time} • {tx.channel && tx.channel !== 'offline' ? (
+                        <span className={`channel-mini-pill bg-${tx.channel}`}>
+                          {tx.channel === 'gofood' ? 'GoFood' : tx.channel === 'shopeefood' ? 'ShopeeFood' : 'GrabFood'}
+                        </span>
+                      ) : (
+                        <span className="payment-tag">{tx.paymentMethod.toUpperCase()}</span>
+                      )}
+                      {tx.settlementStatus === 'pending' && (
+                        <span className="badge-pending-mini">⏳ Belum Cair</span>
+                      )} • {tx.createdByName}
                     </span>
                   </div>
                   <div className={`tx-amount ${tx.type === 'in' ? 'text-emerald' : 'text-rose'}`}>

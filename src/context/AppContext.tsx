@@ -33,6 +33,15 @@ interface AppContextType {
   overdueDebtsCount: number;
   refreshOverdueDebtsCount: () => Promise<void>;
 
+  // Online Food & Settlement Counter
+  pendingSettlementCount: number;
+  pendingSettlementTotal: number;
+  refreshSettlementData: () => Promise<void>;
+
+  // Raw Material Inventory Counter
+  lowStockCount: number;
+  refreshLowStockCount: () => Promise<void>;
+
   // Modal Triggers
   isAddTxOpen: boolean;
   setIsAddTxOpen: (open: boolean) => void;
@@ -46,6 +55,10 @@ interface AppContextType {
   setIsCategoryModalOpen: (open: boolean) => void;
   isRoleModalOpen: boolean;
   setIsRoleModalOpen: (open: boolean) => void;
+  isSettlementModalOpen: boolean;
+  setIsSettlementModalOpen: (open: boolean) => void;
+  isRawMaterialModalOpen: boolean;
+  setIsRawMaterialModalOpen: (open: boolean) => void;
 
   // Impersonation
   isImpersonating: boolean;
@@ -68,6 +81,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
 
   const [overdueDebtsCount, setOverdueDebtsCount] = useState<number>(0);
+  const [pendingSettlementCount, setPendingSettlementCount] = useState<number>(0);
+  const [pendingSettlementTotal, setPendingSettlementTotal] = useState<number>(0);
+  const [lowStockCount, setLowStockCount] = useState<number>(0);
   const [isImpersonating, setIsImpersonating] = useState<boolean>(false);
 
   // Modals
@@ -77,6 +93,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [isRawMaterialModalOpen, setIsRawMaterialModalOpen] = useState(false);
 
   // Online / Offline listener
   useEffect(() => {
@@ -111,6 +129,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .filter(d => d.status === 'unpaid' && d.dueDate < today)
       .count();
     setOverdueDebtsCount(count);
+  };
+
+  const refreshSettlementData = async () => {
+    if (!activeStore) {
+      setPendingSettlementCount(0);
+      setPendingSettlementTotal(0);
+      return;
+    }
+    const pendingTxs = await db.transactions
+      .where('storeId')
+      .equals(activeStore.id)
+      .filter(t => t.type === 'in' && !!t.channel && t.channel !== 'offline' && t.settlementStatus === 'pending')
+      .toArray();
+    
+    setPendingSettlementCount(pendingTxs.length);
+    const total = pendingTxs.reduce((sum, t) => sum + (t.netAmount || t.amount || 0), 0);
+    setPendingSettlementTotal(total);
+  };
+
+  const refreshLowStockCount = async () => {
+    if (!activeStore) {
+      setLowStockCount(0);
+      return;
+    }
+    const lowCount = await db.raw_materials
+      .where('storeId')
+      .equals(activeStore.id)
+      .filter(rm => rm.currentStock <= rm.minStockAlert)
+      .count();
+    setLowStockCount(lowCount);
   };
 
   // Initial seed and load
@@ -158,6 +206,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (activeStore) {
       refreshActiveShift();
       refreshOverdueDebtsCount();
+      refreshSettlementData();
+      refreshLowStockCount();
     }
   }, [activeStore]);
 
@@ -221,6 +271,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     await refreshActiveShift();
     await refreshOverdueDebtsCount();
+    await refreshSettlementData();
+    await refreshLowStockCount();
   };
 
   const startImpersonation = async (tenant: Tenant) => {
@@ -268,6 +320,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refreshAllData,
         overdueDebtsCount,
         refreshOverdueDebtsCount,
+        pendingSettlementCount,
+        pendingSettlementTotal,
+        refreshSettlementData,
+        lowStockCount,
+        refreshLowStockCount,
         isImpersonating,
         startImpersonation,
         exitImpersonation,
@@ -283,6 +340,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsCategoryModalOpen,
         isRoleModalOpen,
         setIsRoleModalOpen,
+        isSettlementModalOpen,
+        setIsSettlementModalOpen,
+        isRawMaterialModalOpen,
+        setIsRawMaterialModalOpen,
       }}
     >
       {children}

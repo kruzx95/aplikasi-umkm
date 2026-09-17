@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { db } from '../../db/database';
 import { logActivity } from '../../db/logger';
-import { Transaction, TransactionType, PaymentMethod, Category } from '../../types';
+import { Transaction, TransactionType, PaymentMethod, Category, SalesChannel } from '../../types';
 import { 
   Search, 
   Filter, 
@@ -11,15 +11,17 @@ import {
   Plus, 
   Trash2, 
   Coins, 
-  CreditCard,
-  Building2,
+  CreditCard, 
+  Building2, 
   Calendar, 
-  AlertTriangle,
-  X,
-  RotateCcw,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Tag
+  AlertTriangle, 
+  X, 
+  RotateCcw, 
+  SlidersHorizontal, 
+  ArrowUpDown, 
+  Tag,
+  Smartphone,
+  ChevronDown
 } from 'lucide-react';
 
 export const TransactionListView: React.FC = () => {
@@ -41,10 +43,22 @@ export const TransactionListView: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
   const [filterMethod, setFilterMethod] = useState<'all' | PaymentMethod>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterChannel, setFilterChannel] = useState<'all' | SalesChannel>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7days' | 'month' | 'custom'>('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
+  const [isFilterExpandedMobile, setIsFilterExpandedMobile] = useState(false);
+
+  const advancedFiltersCount = useMemo(() => {
+    let count = 0;
+    if (dateFilter !== 'all') count++;
+    if (filterMethod !== 'all') count++;
+    if (filterCategory !== 'all') count++;
+    if (filterChannel !== 'all') count++;
+    if (sortBy !== 'date-desc') count++;
+    return count;
+  }, [dateFilter, filterMethod, filterCategory, filterChannel, sortBy]);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -109,6 +123,7 @@ export const TransactionListView: React.FC = () => {
     setFilterType('all');
     setFilterMethod('all');
     setFilterCategory('all');
+    setFilterChannel('all');
     setDateFilter('all');
     setCustomStartDate('');
     setCustomEndDate('');
@@ -121,6 +136,7 @@ export const TransactionListView: React.FC = () => {
     filterType !== 'all' || 
     filterMethod !== 'all' || 
     filterCategory !== 'all' || 
+    filterChannel !== 'all' ||
     dateFilter !== 'all' || 
     sortBy !== 'date-desc';
 
@@ -136,7 +152,16 @@ export const TransactionListView: React.FC = () => {
       // 3. Category filter
       if (filterCategory !== 'all' && tx.categoryId !== filterCategory && tx.categoryName !== filterCategory) return false;
 
-      // 4. Date filter
+      // 4. Channel filter
+      if (filterChannel !== 'all') {
+        if (filterChannel === 'offline') {
+          if (tx.channel && tx.channel !== 'offline') return false;
+        } else {
+          if (tx.channel !== filterChannel) return false;
+        }
+      }
+
+      // 5. Date filter
       if (dateFilter === 'today') {
         if (tx.date !== todayStr) return false;
       } else if (dateFilter === '7days') {
@@ -152,14 +177,15 @@ export const TransactionListView: React.FC = () => {
         if (customEndDate && tx.date > customEndDate) return false;
       }
 
-      // 5. Search query filter
+      // 6. Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const descMatch = tx.description ? tx.description.toLowerCase().includes(q) : false;
         const catMatch = tx.categoryName ? tx.categoryName.toLowerCase().includes(q) : false;
         const actorMatch = tx.createdByName ? tx.createdByName.toLowerCase().includes(q) : false;
+        const orderIdMatch = tx.externalOrderId ? tx.externalOrderId.toLowerCase().includes(q) : false;
         const amountMatch = tx.amount.toString().includes(q);
-        if (!descMatch && !catMatch && !actorMatch && !amountMatch) return false;
+        if (!descMatch && !catMatch && !actorMatch && !orderIdMatch && !amountMatch) return false;
       }
 
       return true;
@@ -185,6 +211,7 @@ export const TransactionListView: React.FC = () => {
     filterType, 
     filterMethod, 
     filterCategory, 
+    filterChannel,
     dateFilter, 
     customStartDate, 
     customEndDate, 
@@ -284,10 +311,25 @@ export const TransactionListView: React.FC = () => {
               Keluar
             </button>
           </div>
+
+          {/* Mobile Filter Toggle Button */}
+          <button
+            type="button"
+            className={`btn btn-outline btn-sm mobile-filter-toggle-btn ${isFilterExpandedMobile || advancedFiltersCount > 0 ? 'active' : ''}`}
+            onClick={() => setIsFilterExpandedMobile(!isFilterExpandedMobile)}
+            aria-expanded={isFilterExpandedMobile}
+            title="Buka / Tutup Filter Lanjutan"
+          >
+            <SlidersHorizontal size={14} />
+            <span>Filter{advancedFiltersCount > 0 ? ` (${advancedFiltersCount})` : ''}</span>
+            <ChevronDown size={14} className={`filter-toggle-arrow ${isFilterExpandedMobile ? 'rotated' : ''}`} />
+          </button>
         </div>
 
-        {/* Row 2: Date Filters & Payment Method */}
-        <div className="filter-row-middle">
+        {/* Collapsible Advanced Filters Container (Collapsible on mobile, inline on desktop) */}
+        <div className={`filter-advanced-collapsible ${isFilterExpandedMobile ? 'expanded' : ''}`}>
+          {/* Row 2: Date Filters & Payment Method */}
+          <div className="filter-row-middle">
           {/* Date Filter Buttons */}
           <div className="filter-item-wrap">
             <span className="filter-field-label">
@@ -411,6 +453,25 @@ export const TransactionListView: React.FC = () => {
             </select>
           </div>
 
+          {/* Channel Selector */}
+          <div className="filter-select-wrap">
+            <label className="filter-field-label">
+              <Smartphone size={13} /> Kanal Penjualan:
+            </label>
+            <select
+              id="filter-channel-select"
+              className="filter-custom-select"
+              value={filterChannel}
+              onChange={(e: any) => setFilterChannel(e.target.value)}
+            >
+              <option value="all">Semua Kanal</option>
+              <option value="offline">🏪 Kasir Offline (Dine In)</option>
+              <option value="gofood">🟢 GoFood</option>
+              <option value="shopeefood">🟠 ShopeeFood</option>
+              <option value="grabfood">🟢 GrabFood</option>
+            </select>
+          </div>
+
           {/* Sorting Selector */}
           <div className="filter-select-wrap">
             <label className="filter-field-label">
@@ -440,6 +501,7 @@ export const TransactionListView: React.FC = () => {
             </button>
           )}
         </div>
+      </div>
 
         {/* Active Filter Tags Bar */}
         <div className="active-filters-info">
@@ -521,8 +583,28 @@ export const TransactionListView: React.FC = () => {
                       <span className="tx-date-text">{tx.date}</span>
                     </td>
                     <td className="tx-col-desc">
-                      <div className="tx-cat-badge">{tx.categoryName}</div>
-                      <div className="tx-desc-text">{tx.description || '-'}</div>
+                      <div className="tx-cat-badge-wrap">
+                        <span className="tx-cat-badge">{tx.categoryName}</span>
+                        {tx.channel && tx.channel !== 'offline' && (
+                          <span className={`channel-mini-pill bg-${tx.channel}`}>
+                            {tx.channel === 'gofood' ? 'GoFood' : tx.channel === 'shopeefood' ? 'ShopeeFood' : 'GrabFood'}
+                          </span>
+                        )}
+                        {tx.settlementStatus === 'pending' && (
+                          <span className="badge-pending-mini">⏳ Pending Cair</span>
+                        )}
+                      </div>
+                      <div className="tx-desc-text">
+                        {tx.description || '-'}
+                        {tx.externalOrderId && (
+                          <code className="order-id-inline"> #{tx.externalOrderId}</code>
+                        )}
+                      </div>
+                      {tx.grossAmount && tx.commissionAmount ? (
+                        <div className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
+                          Kotor: Rp {tx.grossAmount.toLocaleString('id-ID')} | Komisi ({tx.commissionRate || 20}%): -Rp {tx.commissionAmount.toLocaleString('id-ID')}
+                        </div>
+                      ) : null}
                     </td>
                     <td>
                       <span className={`payment-badge ${tx.paymentMethod}`}>

@@ -6,7 +6,9 @@ import {
   Transaction, 
   Shift, 
   Debt, 
-  AuditLog 
+  AuditLog,
+  RawMaterial,
+  SettlementRecord
 } from '../types';
 
 export class KasKedaiDatabase extends Dexie {
@@ -17,6 +19,8 @@ export class KasKedaiDatabase extends Dexie {
   shifts!: Table<Shift, string>;
   debts!: Table<Debt, string>;
   audit_logs!: Table<AuditLog, string>;
+  raw_materials!: Table<RawMaterial, string>;
+  settlements!: Table<SettlementRecord, string>;
 
   constructor() {
     super('KasKedaiDB');
@@ -29,7 +33,14 @@ export class KasKedaiDatabase extends Dexie {
       debts: 'id, tenantId, storeId, status, type, dueDate',
       audit_logs: 'id, tenantId, storeId, actorRole, actionType, timestamp',
     });
+
+    this.version(2).stores({
+      transactions: 'id, tenantId, storeId, date, type, paymentMethod, categoryId, channel, settlementStatus, createdAt',
+      raw_materials: 'id, tenantId, storeId, name, category, currentStock, minStockAlert',
+      settlements: 'id, tenantId, storeId, channel, settledAt'
+    });
   }
 }
 
 export const db = new KasKedaiDatabase();
+

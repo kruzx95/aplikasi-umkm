@@ -8,6 +8,8 @@
 @import './styles/reports.css';
 @import './styles/debts.css';
 @import './styles/superadmin.css';
+@import './styles/settlement.css';
+@import './styles/inventory.css';
 
 /* Google Fonts Import */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
@@ -408,11 +410,20 @@ p {
   width: 100%;
   max-width: 560px;
   max-height: 88vh;
-  overflow-y: auto;
+  max-height: 88dvh;
+  overflow: hidden;
   box-shadow: var(--shadow-xl);
   animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
+}
+
+.modal-content > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (min-width: 640px) {
@@ -444,7 +455,9 @@ p {
   flex-direction: column;
   gap: 1.1rem;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   flex: 1;
+  min-height: 0;
 }
 
 @media (min-width: 640px) {
